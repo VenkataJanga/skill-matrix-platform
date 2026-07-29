@@ -1,0 +1,78 @@
+# ============================================================
+# Skill Matrix Platform — QA Profile Configuration
+# Usage: --spring.profiles.active=qa
+# All sensitive values must come from environment variables
+# ============================================================
+
+spring:
+  # MySQL datasource — QA RDS instance via env vars
+  datasource:
+    url: ${SPRING_DATASOURCE_URL:jdbc:mysql://localhost:3306/skill_matrix_db?useSSL=true&serverTimezone=UTC&characterEncoding=UTF-8}
+    username: ${SPRING_DATASOURCE_USERNAME:skillmatrix_user}
+    password: ${SPRING_DATASOURCE_PASSWORD:skillmatrix_pass}
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    hikari:
+      pool-name: SkillMatrixHikariPool-QA
+      maximum-pool-size: 15
+      minimum-idle: 3
+      connection-timeout: 30000
+      idle-timeout: 600000
+      max-lifetime: 1800000
+
+  # JPA / Hibernate — no DDL changes, no SQL output
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    show-sql: false
+    properties:
+      hibernate:
+        format_sql: false
+        dialect: org.hibernate.dialect.MySQLDialect
+
+  # Flyway — run migrations only (no dev seeds)
+  flyway:
+    locations:
+      - classpath:db/migration
+    clean-disabled: true
+
+# ============================================================
+# Server
+# ============================================================
+server:
+  port: 8080
+  error:
+    include-message: never
+    include-binding-errors: never
+    include-stacktrace: never
+
+# ============================================================
+# Actuator — limited exposure in QA
+# ============================================================
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+  endpoint:
+    health:
+      show-details: when-authorized
+
+# ============================================================
+# Swagger — enabled in QA for testing
+# ============================================================
+springdoc:
+  swagger-ui:
+    enabled: true
+  api-docs:
+    enabled: true
+
+# ============================================================
+# Logging — INFO level in QA
+# ============================================================
+logging:
+  level:
+    root: WARN
+    com.skillmatrix: INFO
+    org.springframework.security: WARN
+    org.flywaydb: INFO
+    org.hibernate.SQL: WARN

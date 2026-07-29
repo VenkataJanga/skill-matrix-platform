@@ -1,0 +1,80 @@
+# ============================================================
+# Skill Matrix Platform — DEV Profile Configuration
+# Usage: --spring.profiles.active=dev
+# ============================================================
+
+spring:
+  # MySQL datasource — local dev
+  datasource:
+    url: jdbc:mysql://localhost:3306/skill_matrix_db?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC&characterEncoding=UTF-8
+    username: skillmatrix_user
+    password: skillmatrix_pass
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    hikari:
+      pool-name: SkillMatrixHikariPool-Dev
+      maximum-pool-size: 10
+      minimum-idle: 2
+      connection-timeout: 30000
+      idle-timeout: 600000
+      max-lifetime: 1800000
+
+  # JPA / Hibernate — show SQL in dev
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+        use_sql_comments: true
+        dialect: org.hibernate.dialect.MySQLDialect
+
+  # Flyway — run all migrations + dev seeds
+  flyway:
+    locations:
+      - classpath:db/migration
+      - classpath:db/dev-migration
+    clean-disabled: false
+
+# ============================================================
+# Server
+# ============================================================
+server:
+  port: 8080
+  error:
+    include-message: always
+    include-binding-errors: always
+    include-stacktrace: on-param
+
+# ============================================================
+# Actuator — expose all in dev
+# ============================================================
+management:
+  endpoints:
+    web:
+      exposure:
+        include: "*"
+  endpoint:
+    health:
+      show-details: always
+
+# ============================================================
+# Swagger — enabled in dev
+# ============================================================
+springdoc:
+  swagger-ui:
+    enabled: true
+  api-docs:
+    enabled: true
+
+# ============================================================
+# Logging — DEBUG for application code in dev
+# ============================================================
+logging:
+  level:
+    root: INFO
+    com.skillmatrix: DEBUG
+    org.springframework.security: DEBUG
+    org.flywaydb: DEBUG
+    org.hibernate.SQL: DEBUG
+    org.hibernate.type.descriptor.sql: TRACE

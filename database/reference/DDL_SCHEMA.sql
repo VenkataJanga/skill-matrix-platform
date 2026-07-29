@@ -1,0 +1,11 @@
+-- ============================================================
+-- Skill Matrix Platform — Reference DDL Schema
+-- This file is a reference copy of the Flyway V01 migration.
+-- The authoritative source is:
+--   backend/src/main/resources/db/migration/V01__initial_schema.sql
+-- ============================================================
+-- See: docs/DDL_SCHEMA.sql for the complete annotated version.
+-- ============================================================
+
+-- This file intentionally references the primary DDL location.
+-- Copy content from docs/DDL_SCHEMA.sql here when updating.
