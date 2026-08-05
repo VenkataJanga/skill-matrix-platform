@@ -1,0 +1,109 @@
+# ============================================================
+# Skill Matrix Platform — Base Application Configuration
+# Profile-specific overrides in application-{profile}.yml
+# Active profile set via: SPRING_PROFILES_ACTIVE env variable
+#   or --spring.profiles.active=dev flag
+# ============================================================
+
+spring:
+  application:
+    name: skill-matrix-platform
+
+  # JPA / Hibernate base settings (profile overrides connection details)
+  jpa:
+    open-in-view: false
+    properties:
+      hibernate:
+        format_sql: false
+        use_sql_comments: false
+        jdbc:
+          batch_size: 50
+        order_inserts: true
+        order_updates: true
+
+  # Flyway base config (locations overridden per profile)
+  flyway:
+    enabled: true
+    baseline-on-migrate: false
+    out-of-order: false
+    table: flyway_schema_history
+
+  # Jackson JSON settings
+  jackson:
+    default-property-inclusion: NON_NULL
+    serialization:
+      write-dates-as-timestamps: false
+      fail-on-empty-beans: false
+    deserialization:
+      fail-on-unknown-properties: false
+    time-zone: UTC
+
+  # Servlet multipart (for Excel import)
+  servlet:
+    multipart:
+      enabled: true
+      max-file-size: 10MB
+      max-request-size: 10MB
+
+# ============================================================
+# Server
+# ============================================================
+server:
+  port: 8080
+  servlet:
+    context-path: /
+  error:
+    include-message: never
+    include-binding-errors: never
+    include-stacktrace: never
+    include-exception: false
+
+# ============================================================
+# Actuator
+# ============================================================
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+      base-path: /actuator
+  endpoint:
+    health:
+      show-details: when-authorized
+  info:
+    env:
+      enabled: true
+
+# ============================================================
+# OpenAPI / Swagger
+# ============================================================
+springdoc:
+  api-docs:
+    path: /api-docs
+    enabled: true
+  swagger-ui:
+    path: /swagger-ui.html
+    enabled: true
+    operations-sorter: alpha
+    tags-sorter: alpha
+    display-request-duration: true
+  show-actuator: false
+
+# ============================================================
+# Application Info
+# ============================================================
+info:
+  app:
+    name: Skill Matrix Platform
+    version: 1.0.0
+    description: Modular skill assessment and gap analysis platform
+
+# ============================================================
+# Logging base (profile overrides level)
+# ============================================================
+logging:
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] [%X{correlationId}] %-5level %logger{36} - %msg%n"
+  level:
+    root: WARN
+    com.skillmatrix: INFO
