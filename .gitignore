@@ -1,3 +1,11 @@
 
 # graphify-axet
 .graphify/
+
+target/
+backend/target/
+*.jar
+*.jar.original
+*.war
+*.ear
+
