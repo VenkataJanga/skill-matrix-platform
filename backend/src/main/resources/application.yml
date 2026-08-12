@@ -20,6 +20,10 @@ spring:
           batch_size: 50
         order_inserts: true
         order_updates: true
+        # All boolean columns in the schema are TINYINT(1) — tell Hibernate
+        # to use TINYINT instead of its default BIT to pass schema validation.
+        type:
+          preferred_boolean_jdbc_type: TINYINT
 
   # Flyway base config (locations overridden per profile)
   flyway:
@@ -88,6 +92,15 @@ springdoc:
     tags-sorter: alpha
     display-request-duration: true
   show-actuator: false
+
+# ============================================================
+# JWT / Security
+# ============================================================
+app:
+  jwt:
+    secret: "SkillMatrixPlatformDefaultSecretKey-ChangeInProduction-MustBe256BitsLong!"
+    expiration-ms: 900000          # 15 minutes
+    refresh-expiration-ms: 604800000  # 7 days
 
 # ============================================================
 # Application Info

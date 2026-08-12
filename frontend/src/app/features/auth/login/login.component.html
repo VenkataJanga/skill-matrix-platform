@@ -1,0 +1,64 @@
+<div class="login-page">
+  <div class="login-card">
+    <!-- Brand -->
+    <div class="login-brand">
+      <span class="brand-icon">🎯</span>
+      <h1>Skill Matrix</h1>
+      <p>Platform for skill assessment & gap analysis</p>
+    </div>
+
+    <!-- Error alert -->
+    <div class="alert alert-error" *ngIf="errorMessage" role="alert">
+      <span class="alert-icon">⚠️</span>
+      {{ errorMessage }}
+    </div>
+
+    <!-- Login form -->
+    <form [formGroup]="loginForm" (ngSubmit)="onSubmit()" novalidate>
+      <!-- Username -->
+      <div class="form-group">
+        <label for="username">Username</label>
+        <input
+          id="username"
+          type="text"
+          formControlName="username"
+          placeholder="Enter your username"
+          autocomplete="username"
+          [class.is-invalid]="f['username'].invalid && f['username'].touched"
+        />
+        <div class="field-error" *ngIf="f['username'].touched && f['username'].errors">
+          <span *ngIf="f['username'].errors['required']">Username is required.</span>
+          <span *ngIf="f['username'].errors['minlength']">Username must be at least 3 characters.</span>
+        </div>
+      </div>
+
+      <!-- Password -->
+      <div class="form-group">
+        <label for="password">Password</label>
+        <div class="input-wrapper">
+          <input
+            id="password"
+            [type]="showPassword ? 'text' : 'password'"
+            formControlName="password"
+            placeholder="Enter your password"
+            autocomplete="current-password"
+            [class.is-invalid]="f['password'].invalid && f['password'].touched"
+          />
+          <button type="button" class="btn-toggle-pwd" (click)="togglePassword()" tabindex="-1">
+            {{ showPassword ? '🙈' : '👁️' }}
+          </button>
+        </div>
+        <div class="field-error" *ngIf="f['password'].touched && f['password'].errors">
+          <span *ngIf="f['password'].errors['required']">Password is required.</span>
+          <span *ngIf="f['password'].errors['minlength']">Password must be at least 6 characters.</span>
+        </div>
+      </div>
+
+      <!-- Submit -->
+      <button type="submit" class="btn-primary btn-full" [disabled]="loading">
+        <span *ngIf="loading" class="spinner"></span>
+        <span>{{ loading ? 'Signing in...' : 'Sign In' }}</span>
+      </button>
+    </form>
+  </div>
+</div>

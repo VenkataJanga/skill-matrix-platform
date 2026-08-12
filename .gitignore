@@ -8,7 +8,7 @@ backend/target/
 *.jar.original
 *.war
 *.ear
-
+l
 frontend/node_modules/
 frontend/dist/
 frontend/.angular/

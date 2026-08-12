@@ -1,0 +1,63 @@
+<div class="app-shell" [class.sidebar-collapsed]="!sidebarOpen">
+  <!-- Header -->
+  <header class="app-header">
+    <div class="header-left">
+      <button class="btn-icon" (click)="toggleSidebar()" title="Toggle sidebar">
+        <span class="icon-menu">☰</span>
+      </button>
+      <div class="brand">
+        <span class="brand-icon">🎯</span>
+        <span class="brand-name">Skill Matrix</span>
+      </div>
+    </div>
+    <div class="header-right">
+      <div class="user-info" *ngIf="currentUser">
+        <div class="user-avatar">{{ currentUser.fullName.charAt(0).toUpperCase() }}</div>
+        <div class="user-details">
+          <span class="user-name">{{ currentUser.fullName }}</span>
+          <span class="user-role">{{ currentUser.roles[0] | titlecase }}</span>
+        </div>
+      </div>
+      <button class="btn-logout" (click)="logout()" title="Logout">
+        <span>⏻</span> Logout
+      </button>
+    </div>
+  </header>
+
+  <!-- Sidebar -->
+  <aside class="app-sidebar">
+    <nav class="sidebar-nav">
+      <ul>
+        <li *ngIf="isAdmin">
+          <a routerLink="/admin" routerLinkActive="active">
+            <span class="nav-icon">🏠</span>
+            <span class="nav-label">Dashboard</span>
+          </a>
+        </li>
+        <li *ngIf="isLeadManager">
+          <a routerLink="/lead" routerLinkActive="active">
+            <span class="nav-icon">📊</span>
+            <span class="nav-label">Lead Dashboard</span>
+          </a>
+        </li>
+        <li *ngIf="isTechnician">
+          <a routerLink="/technician" routerLinkActive="active">
+            <span class="nav-icon">🔧</span>
+            <span class="nav-label">My Assessments</span>
+          </a>
+        </li>
+        <li>
+          <a routerLink="/change-password" routerLinkActive="active">
+            <span class="nav-icon">🔒</span>
+            <span class="nav-label">Change Password</span>
+          </a>
+        </li>
+      </ul>
+    </nav>
+  </aside>
+
+  <!-- Main content -->
+  <main class="app-content">
+    <router-outlet></router-outlet>
+  </main>
+</div>
