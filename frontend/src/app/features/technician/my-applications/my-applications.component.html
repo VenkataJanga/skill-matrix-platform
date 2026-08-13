@@ -1,0 +1,44 @@
+<div class="page-container">
+  <div class="page-header">
+    <h1 class="page-title">My Applications</h1>
+    <p class="page-subtitle">Applications you are assigned to support</p>
+  </div>
+
+  <div *ngIf="loading" class="loading-state">
+    <span class="spinner"></span> Loading your applications…
+  </div>
+
+  <div *ngIf="error" class="alert alert-error">{{ error }}</div>
+
+  <div *ngIf="!loading && !error">
+    <div *ngIf="applications.length === 0" class="empty-card">
+      <p>You are not assigned to any applications yet.</p>
+      <p class="text-muted">Contact your administrator to get assigned.</p>
+    </div>
+
+    <div class="app-grid" *ngIf="applications.length > 0">
+      <div class="app-card" *ngFor="let app of applications">
+        <div class="app-card-header">
+          <span class="app-code">{{ app.applicationCode }}</span>
+          <span class="badge badge-type">{{ app.typeCode }}</span>
+        </div>
+        <h3 class="app-card-title">{{ app.applicationName }}</h3>
+        <p class="app-card-desc" *ngIf="app.description">{{ app.description }}</p>
+        <div class="app-card-meta">
+          <span class="meta-item">
+            <span class="meta-label">Portfolio:</span>
+            {{ app.portfolioName }}
+          </span>
+          <span class="meta-item">
+            <span class="meta-label">Bundle:</span>
+            {{ app.bundleName }}
+          </span>
+        </div>
+      </div>
+    </div>
+
+    <div *ngIf="applications.length > 0" class="table-footer">
+      {{ applications.length }} application(s) assigned
+    </div>
+  </div>
+</div>

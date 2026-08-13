@@ -1,0 +1,219 @@
+<div class="page-container">
+  <div class="page-header">
+    <div>
+      <h1 class="page-title">User Management</h1>
+      <p class="page-subtitle">
+        {{ pagedUsers ? pagedUsers.totalElements + ' user(s) total' : 'Loading…' }}
+      </p>
+    </div>
+    <button class="btn btn-primary" (click)="openAddForm()">+ Add User</button>
+  </div>
+
+  <!-- Alerts -->
+  <div *ngIf="successMessage" class="alert alert-success">
+    {{ successMessage }}
+    <button class="alert-close" (click)="dismissSuccess()">✕</button>
+  </div>
+  <div *ngIf="error" class="alert alert-error">
+    {{ error }}
+    <button class="alert-close" (click)="dismissError()">✕</button>
+  </div>
+
+  <!-- Confirm Deactivate Dialog -->
+  <div *ngIf="confirmDeactivateUser" class="modal-overlay">
+    <div class="modal-box">
+      <h3>Confirm Deactivation</h3>
+      <p>Deactivate user <strong>{{ confirmDeactivateUser.username }}</strong>?
+         They will no longer be able to log in.</p>
+      <div class="modal-actions">
+        <button class="btn btn-danger" (click)="confirmDeactivate()">Deactivate</button>
+        <button class="btn btn-secondary" (click)="cancelDeactivate()">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Add/Edit Form -->
+  <div *ngIf="showForm" class="card mb-4">
+    <h2 class="section-title">{{ formMode === 'create' ? 'Add New User' : 'Edit User' }}</h2>
+    <div *ngIf="formError" class="alert alert-error mb-2">{{ formError }}</div>
+
+    <div class="form-grid">
+      <!-- Username (create only) -->
+      <div class="form-group">
+        <label>Username *</label>
+        <input type="text" [(ngModel)]="form.username" class="form-control"
+               [disabled]="formMode === 'edit'" placeholder="e.g. john_doe" />
+      </div>
+
+      <!-- Full Name -->
+      <div class="form-group">
+        <label>Full Name *</label>
+        <input type="text" [(ngModel)]="form.fullName" class="form-control"
+               placeholder="e.g. John Doe" />
+      </div>
+
+      <!-- Email -->
+      <div class="form-group">
+        <label>Email *</label>
+        <input type="email" [(ngModel)]="form.email" class="form-control"
+               placeholder="e.g. john@nttdata.com" />
+      </div>
+
+      <!-- Role -->
+      <div class="form-group">
+        <label>Role *</label>
+        <select [(ngModel)]="form.roleCode" class="form-control">
+          <option value="">-- Select Role --</option>
+          <option *ngFor="let r of roles" [value]="r">{{ r }}</option>
+        </select>
+      </div>
+
+      <!-- Employee ID -->
+      <div class="form-group">
+        <label>Employee ID</label>
+        <input type="text" [(ngModel)]="form.employeeId" class="form-control"
+               placeholder="e.g. EMP001" />
+      </div>
+
+      <!-- Must Change Password -->
+      <div class="form-group form-group-check">
+        <label class="checkbox-label">
+          <input type="checkbox" [(ngModel)]="form.mustChangePassword" />
+          Force password change on first login
+        </label>
+      </div>
+    </div>
+
+    <div class="form-actions">
+      <button class="btn btn-primary"
+              [disabled]="!isFormValid() || formSubmitting"
+              (click)="submitForm()">
+        <span *ngIf="formSubmitting" class="spinner-sm"></span>
+        {{ formSubmitting ? 'Saving…' : (formMode === 'create' ? 'Create User' : 'Save Changes') }}
+      </button>
+      <button class="btn btn-secondary" (click)="cancelForm()">Cancel</button>
+    </div>
+  </div>
+
+  <!-- Filter toolbar -->
+  <div class="filter-toolbar card mb-4">
+    <div class="filter-row">
+      <!-- Search -->
+      <div class="search-box">
+        <input type="text" [(ngModel)]="searchTerm"
+               placeholder="Search by name, username or email…"
+               class="form-control"
+               (keyup.enter)="onSearch()" />
+        <button class="btn btn-primary btn-sm" (click)="onSearch()">Search</button>
+        <button class="btn btn-secondary btn-sm"
+                [disabled]="!hasActiveUserFilters()"
+                (click)="resetUserFilters()"
+                title="Clear search and filters"
+                aria-label="Clear search and filters">
+          Reset
+        </button>
+      </div>
+
+      <!-- Role filter -->
+      <div class="form-group filter-select">
+        <label>Role</label>
+        <select [(ngModel)]="roleFilter" class="form-control" (change)="onFilterChange()">
+          <option value="">All Roles</option>
+          <option *ngFor="let r of roles" [value]="r">{{ r }}</option>
+        </select>
+      </div>
+
+      <!-- Status filter -->
+      <div class="form-group filter-select">
+        <label>Status</label>
+        <select [(ngModel)]="statusFilter" class="form-control" (change)="onFilterChange()">
+          <option value="">All</option>
+          <option value="ACTIVE">Active</option>
+          <option value="INACTIVE">Inactive</option>
+        </select>
+      </div>
+    </div>
+  </div>
+
+  <!-- Loading -->
+  <div *ngIf="loading" class="loading-state">
+    <span class="spinner"></span> Loading users…
+  </div>
+
+  <!-- Table -->
+  <div *ngIf="!loading && pagedUsers" class="card">
+    <div class="table-wrapper">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th class="sortable" (click)="onSort('fullName')">
+              Full Name {{ sortIcon('fullName') }}
+            </th>
+            <th class="sortable" (click)="onSort('username')">
+              Username {{ sortIcon('username') }}
+            </th>
+            <th class="sortable" (click)="onSort('email')">
+              Email {{ sortIcon('email') }}
+            </th>
+            <th>Roles</th>
+            <th class="text-center">Status</th>
+            <th class="text-center">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let user of pagedUsers.content">
+            <td class="font-medium">{{ user.fullName }}</td>
+            <td class="monospace">{{ user.username }}</td>
+            <td>{{ user.email }}</td>
+            <td>
+              <span *ngFor="let role of user.roles"
+                    [class]="'badge ' + getRoleBadgeClass(role)">{{ role }}</span>
+            </td>
+            <td class="text-center">
+              <span [class]="user.active ? 'status-active' : 'status-inactive'">
+                {{ user.active ? 'Active' : 'Inactive' }}
+              </span>
+            </td>
+            <td class="text-center actions-cell">
+              <button class="btn btn-sm btn-outline" (click)="openEditForm(user)">Edit</button>
+              <button *ngIf="user.active"
+                      class="btn btn-sm btn-danger"
+                      (click)="requestDeactivate(user)">Deactivate</button>
+              <button *ngIf="!user.active"
+                      class="btn btn-sm btn-success"
+                      (click)="activateUser(user)">Activate</button>
+            </td>
+          </tr>
+          <tr *ngIf="pagedUsers.content.length === 0">
+            <td colspan="6" class="empty-state">No users found matching your criteria.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Pagination -->
+    <div class="pagination-bar" *ngIf="totalPages > 1">
+      <button class="btn btn-sm btn-outline"
+              [disabled]="currentPage === 0"
+              (click)="goToPage(currentPage - 1)">‹ Prev</button>
+
+      <ng-container *ngFor="let p of pageNumbers()">
+        <span *ngIf="p === -1" class="page-ellipsis">…</span>
+        <button *ngIf="p !== -1"
+                class="btn btn-sm"
+                [class.btn-primary]="p === currentPage"
+                [class.btn-outline]="p !== currentPage"
+                (click)="goToPage(p)">{{ p + 1 }}</button>
+      </ng-container>
+
+      <button class="btn btn-sm btn-outline"
+              [disabled]="!pagedUsers.hasNext"
+              (click)="goToPage(currentPage + 1)">Next ›</button>
+    </div>
+
+    <div class="table-footer">
+      Page {{ currentPage + 1 }} of {{ totalPages }} —
+      {{ pagedUsers.totalElements }} user(s) total
+    </div>
+  </div>
+</div>

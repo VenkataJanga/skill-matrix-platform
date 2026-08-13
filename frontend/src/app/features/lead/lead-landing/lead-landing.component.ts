@@ -1,12 +1,13 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { RouterModule } from '@angular/router';
 import { AuthService } from '../../../core/services/auth.service';
 import { UserMe } from '../../../core/models/auth.model';
 
 @Component({
   selector: 'app-lead-landing',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, RouterModule],
   template: `
     <div class="landing-page">
       <div class="welcome-banner" style="background: linear-gradient(135deg, #004d40, #00897b)">
@@ -18,6 +19,12 @@ import { UserMe } from '../../../core/models/auth.model';
       </div>
 
       <div class="info-grid">
+        <a routerLink="/lead/applications" class="info-card info-card-link" style="border-top-color: #00897b">
+          <div class="info-card-icon">🗂️</div>
+          <h3>Team Applications</h3>
+          <p>View applications in your team's scope by type and bundle.</p>
+          <span class="badge badge-available">Available</span>
+        </a>
         <div class="info-card" style="border-top-color: #00897b">
           <div class="info-card-icon">🔍</div>
           <h3>Review Assessments</h3>

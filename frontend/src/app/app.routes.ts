@@ -36,7 +36,9 @@ export const routes: Routes = [
           ),
       },
 
-      // Admin landing
+      // -------------------------------------------------------
+      // ADMIN routes
+      // -------------------------------------------------------
       {
         path: 'admin',
         canActivate: [authGuard, roleGuard],
@@ -46,8 +48,28 @@ export const routes: Routes = [
             (m) => m.AdminLandingComponent
           ),
       },
+      {
+        path: 'admin/users',
+        canActivate: [authGuard, roleGuard],
+        data: { roles: ['ADMIN'] },
+        loadComponent: () =>
+          import('./features/admin/user-list/user-list.component').then(
+            (m) => m.UserListComponent
+          ),
+      },
+      {
+        path: 'admin/assign',
+        canActivate: [authGuard, roleGuard],
+        data: { roles: ['ADMIN'] },
+        loadComponent: () =>
+          import('./features/admin/technician-assign/technician-assign.component').then(
+            (m) => m.TechnicianAssignComponent
+          ),
+      },
 
-      // Lead Manager landing
+      // -------------------------------------------------------
+      // LEAD MANAGER routes
+      // -------------------------------------------------------
       {
         path: 'lead',
         canActivate: [authGuard, roleGuard],
@@ -57,8 +79,19 @@ export const routes: Routes = [
             (m) => m.LeadLandingComponent
           ),
       },
+      {
+        path: 'lead/applications',
+        canActivate: [authGuard, roleGuard],
+        data: { roles: ['LEAD_MANAGER'] },
+        loadComponent: () =>
+          import('./features/lead/team-applications/team-applications.component').then(
+            (m) => m.TeamApplicationsComponent
+          ),
+      },
 
-      // Technician landing
+      // -------------------------------------------------------
+      // TECHNICIAN routes
+      // -------------------------------------------------------
       {
         path: 'technician',
         canActivate: [authGuard, roleGuard],
@@ -66,6 +99,15 @@ export const routes: Routes = [
         loadComponent: () =>
           import('./features/technician/tech-landing/tech-landing.component').then(
             (m) => m.TechLandingComponent
+          ),
+      },
+      {
+        path: 'technician/my-applications',
+        canActivate: [authGuard, roleGuard],
+        data: { roles: ['TECHNICIAN'] },
+        loadComponent: () =>
+          import('./features/technician/my-applications/my-applications.component').then(
+            (m) => m.MyApplicationsComponent
           ),
       },
     ],

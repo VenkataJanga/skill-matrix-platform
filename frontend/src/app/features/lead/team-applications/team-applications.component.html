@@ -1,0 +1,51 @@
+<div class="page-container">
+  <div class="page-header">
+    <h1 class="page-title">Team Applications</h1>
+    <p class="page-subtitle">Applications across your team's scope</p>
+  </div>
+
+  <div *ngIf="loading" class="loading-state">
+    <span class="spinner"></span> Loading team applications…
+  </div>
+
+  <div *ngIf="error" class="alert alert-error">{{ error }}</div>
+
+  <div *ngIf="!loading && !error">
+    <div *ngIf="applications.length === 0" class="empty-card">
+      <p>No applications found for your team scope.</p>
+      <p class="text-muted">You may not be assigned to any teams yet.</p>
+    </div>
+
+    <div *ngFor="let typeKey of typeKeys" class="mb-4">
+      <h2 class="group-title">{{ typeKey }}</h2>
+      <div class="card">
+        <div class="table-wrapper">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Code</th>
+                <th>Application Name</th>
+                <th>Portfolio</th>
+                <th>Bundle</th>
+                <th>Description</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let app of byType.get(typeKey)">
+                <td><span class="app-code">{{ app.applicationCode }}</span></td>
+                <td class="font-medium">{{ app.applicationName }}</td>
+                <td>{{ app.portfolioName }}</td>
+                <td><span class="badge badge-bundle">{{ app.bundleCode }}</span></td>
+                <td class="text-muted">{{ app.description || '—' }}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <div *ngIf="applications.length > 0" class="table-footer">
+      {{ applications.length }} application(s) in team scope
+    </div>
+  </div>
+</div>

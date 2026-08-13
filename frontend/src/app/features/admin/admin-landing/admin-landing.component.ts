@@ -1,12 +1,13 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { RouterModule } from '@angular/router';
 import { AuthService } from '../../../core/services/auth.service';
 import { UserMe } from '../../../core/models/auth.model';
 
 @Component({
   selector: 'app-admin-landing',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, RouterModule],
   template: `
     <div class="landing-page">
       <div class="welcome-banner">
@@ -18,12 +19,18 @@ import { UserMe } from '../../../core/models/auth.model';
       </div>
 
       <div class="info-grid">
-        <div class="info-card">
+        <a routerLink="/admin/users" class="info-card info-card-link">
           <div class="info-card-icon">👥</div>
           <h3>User Management</h3>
-          <p>Manage platform users, roles, and access permissions.</p>
-          <span class="badge badge-coming-soon">Coming Soon</span>
-        </div>
+          <p>View and manage all platform users and their roles.</p>
+          <span class="badge badge-available">Available</span>
+        </a>
+        <a routerLink="/admin/assign" class="info-card info-card-link">
+          <div class="info-card-icon">🔗</div>
+          <h3>Technician Assignment</h3>
+          <p>Assign technicians to applications with allocation percentages.</p>
+          <span class="badge badge-available">Available</span>
+        </a>
         <div class="info-card">
           <div class="info-card-icon">📋</div>
           <h3>Skill Catalogue</h3>
@@ -34,12 +41,6 @@ import { UserMe } from '../../../core/models/auth.model';
           <div class="info-card-icon">📊</div>
           <h3>Reports & Analytics</h3>
           <p>View platform-wide skill gap reports and analytics.</p>
-          <span class="badge badge-coming-soon">Coming Soon</span>
-        </div>
-        <div class="info-card">
-          <div class="info-card-icon">⚙️</div>
-          <h3>System Settings</h3>
-          <p>Configure lookup values and system-level settings.</p>
           <span class="badge badge-coming-soon">Coming Soon</span>
         </div>
       </div>

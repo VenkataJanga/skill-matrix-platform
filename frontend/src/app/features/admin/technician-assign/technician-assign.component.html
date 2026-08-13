@@ -1,0 +1,278 @@
+<div class="page-container">
+  <div class="page-header">
+    <div>
+      <h1 class="page-title">Technician Assignment</h1>
+      <p class="page-subtitle">
+        {{ pagedAssignments ? pagedAssignments.totalElements + ' assignment(s) found' : 'Loading…' }}
+      </p>
+    </div>
+    <!-- Bulk actions -->
+    <div class="header-actions" *ngIf="selectedIds.size > 0">
+      <span class="selected-count">{{ selectedIds.size }} selected</span>
+      <button class="btn btn-danger" (click)="openBulkConfirm()">🗑 Bulk Remove</button>
+    </div>
+  </div>
+
+  <!-- Alerts -->
+  <div *ngIf="successMessage" class="alert alert-success">
+    {{ successMessage }}
+    <button class="alert-close" (click)="dismissSuccess()">✕</button>
+  </div>
+  <div *ngIf="assignmentError" class="alert alert-error">
+    {{ assignmentError }}
+    <button class="alert-close" (click)="dismissError()">✕</button>
+  </div>
+
+  <!-- Bulk Result Summary -->
+  <div *ngIf="bulkResult && bulkResult.failedCount > 0" class="alert alert-warning mb-4">
+    <strong>Bulk Remove Result:</strong>
+    {{ bulkResult.successCount }} succeeded, {{ bulkResult.failedCount }} failed.
+    <span *ngFor="let f of bulkResult.failures" class="failure-item">
+      ID {{ f.publicId }}: {{ f.reason }};
+    </span>
+  </div>
+
+  <!-- Bulk Confirm Modal -->
+  <div *ngIf="showBulkConfirm" class="modal-overlay">
+    <div class="modal-box">
+      <h3>Confirm Bulk Remove</h3>
+      <p>Remove <strong>{{ selectedIds.size }}</strong> selected assignment(s)?</p>
+      <div class="form-group mt-2">
+        <label>Reason (optional)</label>
+        <input type="text" [(ngModel)]="bulkReason" class="form-control"
+               placeholder="e.g. Project ended" />
+      </div>
+      <div class="modal-actions">
+        <button class="btn btn-danger" (click)="confirmBulk()">Remove All</button>
+        <button class="btn btn-secondary" (click)="cancelBulk()">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- New Assignment Form -->
+  <div class="card mb-4">
+    <div class="section-header">
+      <h2 class="section-title">New Assignment</h2>
+      <button class="btn btn-secondary btn-sm"
+              (click)="clearAssignmentForm()"
+              title="Clear form fields"
+              aria-label="Clear form fields">
+        Clear Form
+      </button>
+    </div>
+    <div *ngIf="formError" class="alert alert-error mb-2">{{ formError }}</div>
+
+    <!-- Duplicate warning -->
+    <div *ngIf="duplicateCheck?.isDuplicate" class="alert alert-warning mb-2">
+      ⚠️ This technician is already assigned to the selected application.
+    </div>
+    <div *ngIf="duplicateCheck && !duplicateCheck.isDuplicate && form.userPublicId && form.applicationPublicId"
+         class="alert alert-success mb-2">
+      ✓ No existing assignment found — safe to assign.
+    </div>
+
+    <div class="form-grid">
+      <!-- Technician -->
+      <div class="form-group">
+        <label>Technician *</label>
+        <select [(ngModel)]="form.userPublicId" (change)="onTechnicianOrAppChange()" class="form-control">
+          <option value="">-- Select Technician --</option>
+          <option *ngFor="let t of technicians" [value]="t.publicId">
+            {{ t.fullName }} ({{ t.username }})
+          </option>
+        </select>
+      </div>
+
+      <!-- App Type Filter -->
+      <div class="form-group">
+        <label>Application Type</label>
+        <select [(ngModel)]="form.typeCode" (change)="onFormTypeChange()" class="form-control">
+          <option value="">All Types</option>
+          <option *ngFor="let t of applicationTypes" [value]="t.typeCode">{{ t.typeName }}</option>
+        </select>
+      </div>
+
+      <!-- Bundle Filter -->
+      <div class="form-group">
+        <label>Bundle</label>
+        <select [(ngModel)]="form.bundleCode" (change)="onFormBundleChange()" class="form-control">
+          <option value="">All Bundles</option>
+          <option *ngFor="let b of bundles" [value]="b.bundleCode">{{ b.bundleName }}</option>
+        </select>
+      </div>
+
+      <!-- Application -->
+      <div class="form-group">
+        <label>Application *</label>
+        <select [(ngModel)]="form.applicationPublicId" (change)="onTechnicianOrAppChange()" class="form-control">
+          <option value="">-- Select Application --</option>
+          <option *ngFor="let a of applications" [value]="a.publicId">
+            {{ a.applicationName }} ({{ a.typeCode }}/{{ a.bundleCode }})
+          </option>
+        </select>
+        <span *ngIf="checkingDuplicate" class="checking-msg">Checking duplicate…</span>
+      </div>
+
+      <!-- Allocation % -->
+      <div class="form-group">
+        <label>Allocation % *</label>
+        <input type="number" [(ngModel)]="form.allocationPercentage"
+               min="1" max="100" class="form-control" />
+      </div>
+
+      <!-- Effective From -->
+      <div class="form-group">
+        <label>Effective From *</label>
+        <input type="date" [(ngModel)]="form.effectiveFrom" class="form-control" />
+      </div>
+
+      <!-- Effective To -->
+      <div class="form-group">
+        <label>Effective To</label>
+        <input type="date" [(ngModel)]="form.effectiveTo" class="form-control" />
+      </div>
+    </div>
+
+    <div class="form-actions">
+      <button class="btn btn-primary"
+              [disabled]="isAssignDisabled"
+              (click)="onSubmit()">
+        <span *ngIf="submitting" class="spinner-sm"></span>
+        {{ submitting ? 'Saving…' : 'Assign Technician' }}
+      </button>
+    </div>
+  </div>
+
+  <!-- Filter toolbar -->
+  <div class="filter-toolbar card mb-4">
+    <div class="filter-row">
+      <div class="search-box">
+        <input type="text" [(ngModel)]="searchTerm"
+               placeholder="Search by app or technician…"
+               class="form-control"
+               (keyup.enter)="onSearch()" />
+        <button class="btn btn-primary btn-sm" (click)="onSearch()">Search</button>
+        <button class="btn btn-secondary btn-sm"
+                [disabled]="!hasActiveAssignmentFilters()"
+                (click)="resetAssignmentFilters()"
+                title="Clear search and filters"
+                aria-label="Clear search and filters">
+          Reset
+        </button>
+      </div>
+
+      <div class="form-group filter-select">
+        <label>Type</label>
+        <select [(ngModel)]="filterTypeCode" class="form-control" (change)="onFilterChange()">
+          <option value="">All</option>
+          <option *ngFor="let t of applicationTypes" [value]="t.typeCode">{{ t.typeCode }}</option>
+        </select>
+      </div>
+
+      <div class="form-group filter-select">
+        <label>Bundle</label>
+        <select [(ngModel)]="filterBundleCode" class="form-control" (change)="onFilterChange()">
+          <option value="">All</option>
+          <option *ngFor="let b of bundles" [value]="b.bundleCode">{{ b.bundleCode }}</option>
+        </select>
+      </div>
+
+      <div class="form-group filter-select">
+        <label>Status</label>
+        <select [(ngModel)]="filterStatus" class="form-control" (change)="onFilterChange()">
+          <option value="">All</option>
+          <option value="ACTIVE">Active</option>
+          <option value="INACTIVE">Inactive</option>
+        </select>
+      </div>
+    </div>
+  </div>
+
+  <!-- Loading -->
+  <div *ngIf="loadingAssignments" class="loading-state">
+    <span class="spinner"></span> Loading assignments…
+  </div>
+
+  <!-- Assignments table -->
+  <div *ngIf="!loadingAssignments && pagedAssignments" class="card">
+    <div class="table-wrapper">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th class="col-check">
+              <input type="checkbox" [checked]="allSelected" (change)="toggleSelectAll()" />
+            </th>
+            <th>Technician</th>
+            <th>Application</th>
+            <th>Type</th>
+            <th>Bundle</th>
+            <th class="text-center">Allocation %</th>
+            <th>From</th>
+            <th class="text-center">Status</th>
+            <th class="text-center">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let a of pagedAssignments.content"
+              [class.row-selected]="isSelected(a.publicId)">
+            <td>
+              <input type="checkbox"
+                     [checked]="isSelected(a.publicId)"
+                     (change)="toggleSelect(a.publicId)" />
+            </td>
+            <td>
+              <div class="font-medium">{{ a.fullName }}</div>
+              <div class="text-muted small">{{ a.username }}</div>
+            </td>
+            <td class="font-medium">{{ a.applicationName }}</td>
+            <td><span class="badge badge-type">{{ a.typeCode }}</span></td>
+            <td><span class="badge badge-bundle">{{ a.bundleCode }}</span></td>
+            <td class="text-center">{{ a.allocationPercentage }}%</td>
+            <td>{{ a.effectiveFrom }}</td>
+            <td class="text-center">
+              <span [class]="a.active ? 'status-active' : 'status-inactive'">
+                {{ a.active ? 'Active' : 'Inactive' }}
+              </span>
+            </td>
+            <td class="text-center">
+              <button *ngIf="a.active"
+                      class="btn btn-sm btn-danger"
+                      (click)="deactivateSingle(a.publicId, a.fullName, a.applicationName)">
+                Remove
+              </button>
+              <span *ngIf="!a.active" class="text-muted small">Removed</span>
+            </td>
+          </tr>
+          <tr *ngIf="pagedAssignments.content.length === 0">
+            <td colspan="9" class="empty-state">No assignments found.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Pagination -->
+    <div class="pagination-bar" *ngIf="totalPages > 1">
+      <button class="btn btn-sm btn-outline"
+              [disabled]="currentPage === 0"
+              (click)="goToPage(currentPage - 1)">‹ Prev</button>
+
+      <ng-container *ngFor="let p of pageNumbers()">
+        <span *ngIf="p === -1" class="page-ellipsis">…</span>
+        <button *ngIf="p !== -1"
+                class="btn btn-sm"
+                [class.btn-primary]="p === currentPage"
+                [class.btn-outline]="p !== currentPage"
+                (click)="goToPage(p)">{{ p + 1 }}</button>
+      </ng-container>
+
+      <button class="btn btn-sm btn-outline"
+              [disabled]="!pagedAssignments.hasNext"
+              (click)="goToPage(currentPage + 1)">Next ›</button>
+    </div>
+
+    <div class="table-footer">
+      Page {{ currentPage + 1 }} of {{ totalPages }} —
+      {{ pagedAssignments.totalElements }} assignment(s) total
+    </div>
+  </div>
+</div>

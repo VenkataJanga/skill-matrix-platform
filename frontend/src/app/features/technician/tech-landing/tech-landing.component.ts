@@ -1,12 +1,13 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { RouterModule } from '@angular/router';
 import { AuthService } from '../../../core/services/auth.service';
 import { UserMe } from '../../../core/models/auth.model';
 
 @Component({
   selector: 'app-tech-landing',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, RouterModule],
   template: `
     <div class="landing-page">
       <div class="welcome-banner" style="background: linear-gradient(135deg, #4a148c, #7b1fa2)">
@@ -36,12 +37,12 @@ import { UserMe } from '../../../core/models/auth.model';
           <p>View and track your training recommendations.</p>
           <span class="badge badge-coming-soon">Coming Soon</span>
         </div>
-        <div class="info-card" style="border-top-color: #7b1fa2">
+        <a routerLink="/technician/my-applications" class="info-card info-card-link" style="border-top-color: #7b1fa2">
           <div class="info-card-icon">🏭</div>
           <h3>My Applications</h3>
           <p>View applications you are assigned to support.</p>
-          <span class="badge badge-coming-soon">Coming Soon</span>
-        </div>
+          <span class="badge badge-available">Available</span>
+        </a>
       </div>
 
       <div class="user-detail-card">
