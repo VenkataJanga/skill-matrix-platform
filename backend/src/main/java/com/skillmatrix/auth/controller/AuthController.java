@@ -2,6 +2,7 @@ package com.skillmatrix.auth.controller;
 
 import com.skillmatrix.auth.dto.*;
 import com.skillmatrix.auth.service.AuthService;
+import com.skillmatrix.auth.service.PasswordResetService;
 import com.skillmatrix.common.dto.ApiResponse;
 import com.skillmatrix.common.exception.BusinessException;
 import com.skillmatrix.domain.entity.User;
@@ -18,7 +19,8 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 /**
- * Authentication endpoints — login, refresh, logout, change-password, me.
+ * Authentication endpoints — login, refresh, logout, change-password, me,
+ * forgot-password, reset-password.
  */
 @RestController
 @RequestMapping("/api/v1/auth")
@@ -28,6 +30,7 @@ public class AuthController {
 
     private final AuthService authService;
     private final UserRepository userRepository;
+    private final PasswordResetService passwordResetService;
 
     // ----------------------------------------------------------------
     // POST /api/v1/auth/login
@@ -90,6 +93,36 @@ public class AuthController {
         User user = loadUser(principal);
         authService.changePassword(user, request, resolveIp(httpRequest), resolveCorrelationId(httpRequest));
         return ResponseEntity.ok(ApiResponse.ok("Password changed successfully"));
+    }
+
+    // ----------------------------------------------------------------
+    // POST /api/v1/auth/forgot-password
+    // ----------------------------------------------------------------
+
+    @PostMapping("/forgot-password")
+    @Operation(summary = "Request a password reset link (development/pilot). "
+            + "Always returns a generic response — never reveals whether the account exists.")
+    public ResponseEntity<ApiResponse<ForgotPasswordResponse>> forgotPassword(
+            @Valid @RequestBody ForgotPasswordRequest request,
+            HttpServletRequest httpRequest) {
+
+        ForgotPasswordResponse response = passwordResetService.requestReset(request, resolveIp(httpRequest));
+        return ResponseEntity.ok(ApiResponse.ok(response));
+    }
+
+    // ----------------------------------------------------------------
+    // POST /api/v1/auth/reset-password
+    // ----------------------------------------------------------------
+
+    @PostMapping("/reset-password")
+    @Operation(summary = "Reset password using a one-time reset token")
+    public ResponseEntity<ApiResponse<Void>> resetPassword(
+            @Valid @RequestBody ResetPasswordRequest request,
+            HttpServletRequest httpRequest) {
+
+        passwordResetService.resetPassword(request, resolveIp(httpRequest), resolveCorrelationId(httpRequest));
+        return ResponseEntity.ok(ApiResponse.ok(
+                "Password reset successfully. Please sign in with your new password."));
     }
 
     // ----------------------------------------------------------------

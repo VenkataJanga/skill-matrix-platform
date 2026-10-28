@@ -34,6 +34,15 @@ public class Application {
     @Column(name = "description", columnDefinition = "TEXT")
     private String description;
 
+    /**
+     * Lookup value for APPLICATION_LIFECYCLE_STATUS (ACTIVE / INACTIVE / DEPRECATED / FUTURE).
+     * Column already existed in the DB schema (V01) — this JPA mapping was added during
+     * the M4 Application Master stabilization enhancement with no schema change required.
+     */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "lifecycle_status_lookup_id")
+    private LookupValue lifecycleStatusLookup;
+
     @Column(name = "remarks", columnDefinition = "TEXT")
     private String remarks;
 

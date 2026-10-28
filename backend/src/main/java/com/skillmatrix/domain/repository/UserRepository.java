@@ -4,10 +4,13 @@ import com.skillmatrix.domain.entity.User;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.util.Collection;
+import java.util.List;
 import java.util.Optional;
 
 @Repository
@@ -23,6 +26,10 @@ public interface UserRepository extends JpaRepository<User, Long> {
 
     boolean existsByEmail(String email);
 
+    List<User> findAllByUsernameIn(Collection<String> usernames);
+
+    List<User> findAllByEmailIn(Collection<String> emails);
+
     /** Load user with all active roles eagerly to avoid N+1 on login. */
     @Query("""
             SELECT DISTINCT u FROM User u
@@ -33,6 +40,20 @@ public interface UserRepository extends JpaRepository<User, Long> {
             WHERE u.username = :username
             """)
     Optional<User> findByUsernameWithRolesAndPermissions(@Param("username") String username);
+
+    /**
+     * Count active users that have a given primary role code.
+     * Used by the delete guard to prevent removal of the last active ADMIN.
+     */
+    long countByActiveAndPrimaryRole_RoleCode(boolean active, String roleCode);
+
+    /**
+     * Nullify manager_id on all users whose manager is the user being deleted.
+     * Called as a pre-delete cleanup step to preserve referential integrity.
+     */
+    @Modifying
+    @Query("UPDATE User u SET u.manager = null WHERE u.manager.id = :managerId")
+    void nullifyManagerFor(@Param("managerId") Long managerId);
 
     /**
      * Paginated search across username, fullName, email and employeeId.

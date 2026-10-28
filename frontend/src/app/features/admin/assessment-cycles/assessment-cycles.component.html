@@ -1,0 +1,304 @@
+<div class="cycles-page">
+  <header class="page-header">
+    <h1>Assessment Cycle Management</h1>
+    <button class="btn btn-primary" (click)="openAddForm()">+ New Cycle</button>
+  </header>
+
+  <div class="alert alert-success" *ngIf="successMessage">
+    {{ successMessage }}
+    <button class="close-btn" (click)="dismissSuccess()">&times;</button>
+  </div>
+  <div class="alert alert-error" *ngIf="error">
+    {{ error }}
+    <button class="close-btn" (click)="dismissError()">&times;</button>
+  </div>
+
+  <!-- Filters -->
+  <div class="filters-bar">
+    <input type="text" placeholder="Search cycle or application..." [(ngModel)]="searchTerm" (keyup.enter)="onSearch()" />
+    <select [(ngModel)]="filterApplicationPublicId" (change)="onFilterChange()">
+      <option value="">All Applications</option>
+      <option *ngFor="let a of applications" [value]="a.publicId">{{ a.applicationName }}</option>
+    </select>
+    <select [(ngModel)]="filterStatusCode" (change)="onFilterChange()">
+      <option value="">All Statuses</option>
+      <option value="PLANNED">Planned</option>
+      <option value="OPEN">Open</option>
+      <option value="CLOSED">Closed</option>
+    </select>
+    <button class="btn btn-secondary" (click)="onSearch()">Search</button>
+    <button class="btn btn-link" *ngIf="hasActiveFilters()" (click)="resetFilters()">Reset Filters</button>
+  </div>
+
+  <!-- List -->
+  <div class="table-wrapper" *ngIf="!loading">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Cycle</th>
+          <th>Application</th>
+          <th>Requirement Version</th>
+          <th>Start Date</th>
+          <th>End Date</th>
+          <th>Status</th>
+          <th>Created By</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let c of pagedCycles?.content">
+          <td>{{ c.cycleName }}</td>
+          <td>{{ c.applicationName }}</td>
+          <td>{{ c.requirementVersionCode }}</td>
+          <td>{{ c.cycleStartDate }}</td>
+          <td>{{ c.cycleEndDate }}</td>
+          <td>
+            <span class="badge" [ngClass]="c.statusCode?.toLowerCase()">{{ c.statusLabel ?? c.statusCode }}</span>
+            <span class="badge badge-expired" *ngIf="isExpired(c)">Expired</span>
+          </td>
+          <td>{{ c.createdBy }}</td>
+          <td class="actions">
+            <button class="btn-icon" (click)="viewDetails(c)" title="View">View</button>
+            <button class="btn-icon" *ngIf="c.statusCode === 'PLANNED'" (click)="openEditForm(c)" title="Edit">Edit</button>
+            <button class="btn-icon" *ngIf="c.statusCode === 'PLANNED'" (click)="requestOpen(c)" title="Open">Open</button>
+            <button class="btn-icon" *ngIf="c.statusCode === 'OPEN'" (click)="requestClose(c)" title="Close">Close</button>
+            <button class="btn-icon" *ngIf="canReopen(c)" (click)="requestReopen(c)" title="Reopen">Reopen</button>
+            <button class="btn-icon" *ngIf="c.statusCode === 'CLOSED' || isExpired(c)" (click)="createNextCycle(c)" title="Create Next Cycle">Create Next Cycle</button>
+          </td>
+        </tr>
+        <tr *ngIf="pagedCycles?.content?.length === 0">
+          <td colspan="8" class="empty-row">No assessment cycles found.</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="loading" *ngIf="loading">Loading...</div>
+
+  <!-- Pagination -->
+  <div class="pagination" *ngIf="totalPages > 1">
+    <button [disabled]="currentPage === 0" (click)="goToPage(currentPage - 1)">Prev</button>
+    <span>Page {{ currentPage + 1 }} of {{ totalPages }}</span>
+    <button [disabled]="currentPage >= totalPages - 1" (click)="goToPage(currentPage + 1)">Next</button>
+  </div>
+
+  <!-- Create/Edit Form Modal -->
+  <div class="modal-overlay" *ngIf="showForm" (click)="cancelForm()">
+    <div class="modal-box" (click)="$event.stopPropagation()">
+      <h3 class="modal-title">{{ formMode === 'create' ? 'New Assessment Cycle' : 'Edit Assessment Cycle' }}</h3>
+
+      <div class="form-group">
+        <label>Cycle Name *</label>
+        <input type="text" class="form-control" [(ngModel)]="form.cycleName"
+               (blur)="onCycleNameChange()" placeholder="e.g. ATLAS FY26 Assessment" />
+
+        <div class="duplicate-warning" *ngIf="duplicateCycle">
+          <p class="field-hint field-hint-error">
+            An assessment cycle with this name already exists for {{ duplicateCycle.applicationName }}.
+          </p>
+          <div class="duplicate-details">
+            <div><strong>Existing Cycle:</strong> {{ duplicateCycle.cycleName }}</div>
+            <div><strong>Period:</strong> {{ duplicateCycle.cycleStartDate | date: 'dd-MMM-yyyy' }} – {{ duplicateCycle.cycleEndDate | date: 'dd-MMM-yyyy' }}</div>
+            <div><strong>Status:</strong> {{ duplicateCycle.statusLabel ?? duplicateCycle.statusCode }}
+              <span class="badge badge-expired" *ngIf="isExpired(duplicateCycle)">Expired</span>
+            </div>
+          </div>
+          <button type="button" class="btn btn-sm btn-outline" *ngIf="suggestedCycleName" (click)="useSuggestedName()">
+            Use suggested name: "{{ suggestedCycleName }}"
+          </button>
+        </div>
+
+        <p class="field-hint field-hint-warning" *ngIf="nameDateMismatchWarning">{{ nameDateMismatchWarning }}</p>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label>Application Type</label>
+          <select class="form-control" [(ngModel)]="form.typeCode" (change)="onFormTypeChange()">
+            <option value="">All Types</option>
+            <option *ngFor="let t of applicationTypes" [value]="t.typeCode">{{ t.typeName }}</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Bundle</label>
+          <select class="form-control" [(ngModel)]="form.bundleCode" (change)="onFormBundleChange()">
+            <option value="">All Bundles</option>
+            <option *ngFor="let b of bundles" [value]="b.bundleCode">{{ b.bundleName }}</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label>Application *</label>
+        <select class="form-control" [(ngModel)]="form.applicationPublicId" (change)="onFormApplicationChange()">
+          <option value="">Select Application</option>
+          <option *ngFor="let a of formApplications" [value]="a.publicId">{{ a.applicationName }}</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label>Requirement Version *</label>
+        <select class="form-control" [(ngModel)]="form.requirementVersionPublicId"
+                [disabled]="versionsLoading || versionsError || formVersions.length === 0">
+          <option value="" *ngIf="!versionsLoading && !versionsError">
+            {{ formVersions.length === 0 ? 'No eligible versions available' : 'Select Version' }}
+          </option>
+          <option value="" *ngIf="versionsLoading">Loading versions...</option>
+          <option value="" *ngIf="versionsError">Unable to load Requirement Versions</option>
+          <option *ngFor="let v of formVersions" [value]="v.publicId">{{ v.versionCode }} — {{ v.versionName }}</option>
+        </select>
+
+        <p class="field-hint field-hint-error" *ngIf="versionsError">
+          Unable to load Requirement Versions. Please try again.
+        </p>
+        <p class="field-hint field-hint-warning"
+           *ngIf="!versionsLoading && !versionsError && form.applicationPublicId && formVersions.length === 0">
+          No eligible Requirement Version is available for this application.
+          Complete Application Skill Requirement Mapping first (Admin → Skill Requirement Mapping).
+        </p>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label>Start Date *</label>
+          <input type="date" class="form-control" [(ngModel)]="form.cycleStartDate" (change)="onDatesChange()" />
+        </div>
+        <div class="form-group">
+          <label>End Date *</label>
+          <input type="date" class="form-control" [(ngModel)]="form.cycleEndDate" (change)="onDatesChange()" />
+        </div>
+      </div>
+
+      <div class="alert alert-error" *ngIf="formError">{{ formError }}</div>
+
+      <div class="modal-actions">
+        <button class="btn btn-secondary" (click)="cancelForm()">Cancel</button>
+        <button class="btn btn-primary" [disabled]="!isFormValid() || formSubmitting" (click)="submitForm()">
+          {{ formSubmitting ? 'Saving...' : 'Save as PLANNED' }}
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Open confirmation -->
+  <div class="modal-overlay" *ngIf="confirmOpenCycle" (click)="cancelOpen()">
+    <div class="modal-box modal-box-sm" (click)="$event.stopPropagation()">
+      <h3 class="modal-title">Open Assessment Cycle</h3>
+      <p>Open cycle <strong>{{ confirmOpenCycle.cycleName }}</strong>? Technicians will be able to start assessments once opened.</p>
+      <div class="modal-actions">
+        <button class="btn btn-secondary" (click)="cancelOpen()">Cancel</button>
+        <button class="btn btn-primary" (click)="confirmOpen()">Open Cycle</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Close confirmation -->
+  <div class="modal-overlay" *ngIf="confirmCloseCycle" (click)="cancelClose()">
+    <div class="modal-box modal-box-sm" (click)="$event.stopPropagation()">
+      <h3 class="modal-title">Close Assessment Cycle</h3>
+      <p>Close cycle <strong>{{ confirmCloseCycle.cycleName }}</strong>? No further technician submissions will be allowed.</p>
+      <div class="modal-actions">
+        <button class="btn btn-secondary" (click)="cancelClose()">Cancel</button>
+        <button class="btn btn-danger" (click)="confirmClose()">Close Cycle</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Reopen confirmation -->
+  <div class="modal-overlay" *ngIf="reopenCycleTarget" (click)="cancelReopen()">
+    <div class="modal-box modal-box-sm" (click)="$event.stopPropagation()">
+      <h3 class="modal-title">Reopen Assessment Cycle</h3>
+
+      <dl class="detail-list reopen-detail-list">
+        <dt>Cycle</dt>
+        <dd>{{ reopenCycleTarget.cycleName }}</dd>
+
+        <dt>Application</dt>
+        <dd>{{ reopenCycleTarget.applicationName }}</dd>
+
+        <dt>Current Status</dt>
+        <dd><span class="badge" [ngClass]="reopenCycleTarget.statusCode?.toLowerCase()">{{ reopenCycleTarget.statusLabel ?? reopenCycleTarget.statusCode }}</span></dd>
+
+        <dt>Start Date</dt>
+        <dd>{{ reopenCycleTarget.cycleStartDate | date: 'dd-MMM-yyyy' }}</dd>
+
+        <dt>End Date</dt>
+        <dd>{{ reopenCycleTarget.cycleEndDate | date: 'dd-MMM-yyyy' }}</dd>
+      </dl>
+
+      <p class="field-hint field-hint-warning" *ngIf="isClosedCycleExpired(reopenCycleTarget)">
+        This assessment cycle has expired. Please supply a new End Date (on or after today) to reopen it.
+      </p>
+
+      <div class="form-group" *ngIf="isClosedCycleExpired(reopenCycleTarget)">
+        <label>New End Date *</label>
+        <input type="date" class="form-control" [(ngModel)]="reopenNewEndDate" />
+      </div>
+
+      <div class="form-group">
+        <label>Reopen Reason *</label>
+        <textarea class="form-control" rows="3" [(ngModel)]="reopenReason"
+                  placeholder="e.g. Cycle was closed accidentally during manual validation."></textarea>
+      </div>
+
+      <div class="alert alert-error" *ngIf="reopenError">{{ reopenError }}</div>
+
+      <div class="modal-actions">
+        <button class="btn btn-secondary" (click)="cancelReopen()">Cancel</button>
+        <button class="btn btn-primary" [disabled]="!isReopenValid() || reopenSubmitting" (click)="confirmReopen()">
+          {{ reopenSubmitting ? 'Reopening...' : 'Reopen Cycle' }}
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Detail view -->
+  <div class="modal-overlay" *ngIf="viewingCycle" (click)="closeDetails()">
+    <div class="modal-box modal-box-md cycle-detail-modal" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <h3 class="modal-title">Assessment Cycle Details</h3>
+        <button class="modal-close-x" type="button" aria-label="Close" (click)="closeDetails()">&times;</button>
+      </div>
+
+      <div class="modal-body">
+        <dl class="detail-list">
+          <dt>Cycle Name</dt>
+          <dd>{{ viewingCycle.cycleName }}</dd>
+
+          <dt>Application</dt>
+          <dd>{{ viewingCycle.applicationName }} ({{ viewingCycle.applicationCode }})</dd>
+
+          <dt>Requirement Version</dt>
+          <dd>{{ viewingCycle.requirementVersionCode }}</dd>
+
+          <dt>Start Date</dt>
+          <dd>{{ viewingCycle.cycleStartDate | date: 'dd-MMM-yyyy' }}</dd>
+
+          <dt>End Date</dt>
+          <dd>{{ viewingCycle.cycleEndDate | date: 'dd-MMM-yyyy' }}</dd>
+
+          <dt>Status</dt>
+          <dd>
+            <span class="badge" [ngClass]="viewingCycle.statusCode?.toLowerCase()">{{ viewingCycle.statusLabel ?? viewingCycle.statusCode }}</span>
+          </dd>
+
+          <dt *ngIf="isExpired(viewingCycle)">Assessment Window</dt>
+          <dd *ngIf="isExpired(viewingCycle)"><span class="badge badge-expired">Expired</span></dd>
+
+          <dt>Created By</dt>
+          <dd>{{ viewingCycle.createdBy ?? '—' }}</dd>
+
+          <dt>Created At</dt>
+          <dd>{{ viewingCycle.createdAt | date: 'dd-MMM-yyyy HH:mm' }}</dd>
+
+          <dt>Updated At</dt>
+          <dd>{{ viewingCycle.updatedAt | date: 'dd-MMM-yyyy HH:mm' }}</dd>
+        </dl>
+      </div>
+
+      <div class="modal-actions">
+        <button class="btn btn-secondary" (click)="closeDetails()">Close</button>
+      </div>
+    </div>
+  </div>
+</div>

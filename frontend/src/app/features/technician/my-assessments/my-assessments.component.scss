@@ -1,0 +1,42 @@
+.summary-cards {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.summary-card {
+  flex: 1;
+  background: #fff;
+  border: 1px solid #e9ecef;
+  border-radius: 8px;
+  padding: 16px;
+  text-align: center;
+}
+
+.summary-count {
+  font-size: 2rem;
+  font-weight: 700;
+  color: #1c7ed6;
+}
+
+.summary-label {
+  color: #495057;
+  margin-top: 4px;
+}
+
+.badge {
+  padding: 2px 10px;
+  border-radius: 12px;
+  font-size: 0.8rem;
+  font-weight: 600;
+
+  &.not_started { background: #e9ecef; color: #495057; }
+  &.draft       { background: #fff3bf; color: #997404; }
+  &.submitted   { background: #e3fcef; color: #087f5b; }
+}
+
+.badge-window {
+  margin-left: 4px;
+  background: #ffe3e3;
+  color: #c92a2a;
+}

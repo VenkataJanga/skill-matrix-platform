@@ -14,6 +14,7 @@ import com.skillmatrix.domain.entity.UserRole;
 import com.skillmatrix.domain.repository.RoleRepository;
 import com.skillmatrix.domain.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -29,6 +30,7 @@ import java.util.UUID;
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
+@Slf4j
 public class AdminUserService {
 
     // Default password assigned to newly created users
@@ -73,9 +75,11 @@ public class AdminUserService {
     public UserDetailDto createUser(CreateUserRequest request, String actorUsername) {
         // Validate uniqueness
         if (userRepository.existsByUsername(request.username())) {
+            log.warn("createUser rejected — username already exists: {}", request.username());
             throw new BusinessException("Username already exists: " + request.username(), HttpStatus.CONFLICT);
         }
         if (userRepository.existsByEmail(request.email())) {
+            log.warn("createUser rejected — email already exists: {}", request.email());
             throw new BusinessException("Email already exists: " + request.email(), HttpStatus.CONFLICT);
         }
 
@@ -114,6 +118,8 @@ public class AdminUserService {
         user.getUserRoles().add(userRole);
 
         User saved = userRepository.save(user);
+        log.info("User created: publicId={} username={} role={} by={}",
+                saved.getPublicId(), saved.getUsername(), role.getRoleCode(), actorUsername);
 
         auditService.log("CREATE_USER", AuditService.ENTITY_USER,
                 null, actorUsername, saved.getPublicId(), null, null,
@@ -134,6 +140,7 @@ public class AdminUserService {
         // Check email uniqueness if changed
         if (!user.getEmail().equalsIgnoreCase(request.email())
                 && userRepository.existsByEmail(request.email())) {
+            log.warn("updateUser rejected — email already exists: {} for publicId={}", request.email(), publicId);
             throw new BusinessException("Email already exists: " + request.email(), HttpStatus.CONFLICT);
         }
 
@@ -156,18 +163,44 @@ public class AdminUserService {
         user.setMustChangePassword(request.mustChangePassword());
         user.setUpdatedBy(actorUsername);
 
-        // Update user_roles: deactivate old roles, add new one if changed
-        user.getUserRoles().forEach(ur -> ur.setActive(false));
-        UserRole newRole = UserRole.builder()
-                .user(user)
-                .role(role)
-                .assignedAt(LocalDateTime.now())
-                .assignedBy(actorUsername)
-                .active(true)
-                .build();
-        user.getUserRoles().add(newRole);
+        // Update user_roles only when the role actually changes.
+        // The user_roles table has UNIQUE (user_id, role_id), so always inserting
+        // a new row for the same role would cause a constraint violation.
+        Role currentPrimaryRole = user.getPrimaryRole();
+        boolean roleChanged = currentPrimaryRole == null
+                || !currentPrimaryRole.getId().equals(role.getId());
+
+        if (roleChanged) {
+            // Deactivate all existing active role assignments
+            user.getUserRoles().forEach(ur -> ur.setActive(false));
+
+            // Check if a (possibly deactivated) UserRole for the target role already
+            // exists — reactivate it to avoid inserting a duplicate row.
+            boolean reactivated = user.getUserRoles().stream()
+                    .filter(ur -> ur.getRole().getId().equals(role.getId()))
+                    .peek(ur -> {
+                        ur.setActive(true);
+                        ur.setAssignedAt(LocalDateTime.now());
+                        ur.setAssignedBy(actorUsername);
+                    })
+                    .findFirst()
+                    .isPresent();
+
+            if (!reactivated) {
+                // No prior UserRole record for the new role — create a fresh one
+                UserRole newUserRole = UserRole.builder()
+                        .user(user)
+                        .role(role)
+                        .assignedAt(LocalDateTime.now())
+                        .assignedBy(actorUsername)
+                        .active(true)
+                        .build();
+                user.getUserRoles().add(newUserRole);
+            }
+        }
 
         User saved = userRepository.save(user);
+        log.info("User updated: publicId={} username={} by={}", publicId, saved.getUsername(), actorUsername);
 
         auditService.log("UPDATE_USER", AuditService.ENTITY_USER,
                 null, actorUsername, publicId, null, null,
@@ -195,6 +228,9 @@ public class AdminUserService {
         User saved = userRepository.save(user);
 
         String action = request.active() ? "ACTIVATE_USER" : "DEACTIVATE_USER";
+        log.info("User status changed: publicId={} username={} active={} by={}",
+                publicId, saved.getUsername(), request.active(), actorUsername);
+
         auditService.log(action, AuditService.ENTITY_USER,
                 null, actorUsername, publicId, null, null,
                 "{\"active\":" + request.active() + ",\"reason\":\"" + request.reason() + "\"}");

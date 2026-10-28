@@ -18,11 +18,15 @@ public record ApplicationAssignmentDto(
         BigDecimal allocationPercentage,
         LocalDate effectiveFrom,
         LocalDate effectiveTo,
-        boolean active
+        boolean active,
+        String roleOnAppCode,
+        boolean primary
 ) {
     public static ApplicationAssignmentDto from(UserApplicationMapping m) {
         var app = m.getApplication();
         var portfolio = app.getPortfolio();
+        var roleLookup = m.getRoleOnAppLookup();
+        String roleCode = roleLookup != null ? roleLookup.getValueCode() : null;
         return new ApplicationAssignmentDto(
                 m.getPublicId(),
                 m.getUser().getPublicId(),
@@ -36,7 +40,9 @@ public record ApplicationAssignmentDto(
                 m.getAllocationPercentage(),
                 m.getEffectiveFrom(),
                 m.getEffectiveTo(),
-                m.isActive()
+                m.isActive(),
+                roleCode,
+                "PRIMARY".equals(roleCode)
         );
     }
 }

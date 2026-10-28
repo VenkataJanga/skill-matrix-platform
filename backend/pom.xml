@@ -41,6 +41,8 @@
         <springdoc.version>2.6.0</springdoc.version>
         <poi.version>5.3.0</poi.version>
         <testcontainers.version>1.20.1</testcontainers.version>
+        <!-- Base JVM args for surefire fork; JaCoCo prepare-agent appends its -javaagent here -->
+        <argLine>-Xmx512m -Xms256m</argLine>
     </properties>
 
     <!-- ============================================================
@@ -237,6 +239,25 @@
                         <arg>-Amapstruct.defaultComponentModel=spring</arg>
                         <arg>-Amapstruct.unmappedTargetPolicy=IGNORE</arg>
                     </compilerArgs>
+                </configuration>
+            </plugin>
+
+            <!-- Maven Surefire — print test failures directly to the console
+                 instead of routing them to target/surefire-reports files.
+                 This ensures every test failure shows the exact class, method,
+                 expected/actual values and stack trace in the Maven output. -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <configuration>
+                    <!-- Stream all test output (stdout/stderr) to the terminal -->
+                    <useFile>false</useFile>
+                    <!-- Show pass/fail summary after each test class -->
+                    <printSummary>true</printSummary>
+                    <!-- Human-readable inline output rather than XML -->
+                    <reportFormat>plain</reportFormat>
+                    <!-- Ensure exceptions are printed in full -->
+                    <trimStackTrace>false</trimStackTrace>
                 </configuration>
             </plugin>
 

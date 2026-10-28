@@ -1,0 +1,286 @@
+<div class="page-container">
+  <div class="page-header">
+    <div>
+      <h1 class="page-title">Skill Requirement Mapping</h1>
+      <p class="page-subtitle">Define which skills an application requires, expected level and mandatory status.</p>
+    </div>
+    <button class="btn btn-secondary" (click)="toggleImportPanel()">
+      {{ showImportPanel ? 'Hide Import' : '📥 Excel Import' }}
+    </button>
+  </div>
+
+  <!-- Alerts -->
+  <div *ngIf="successMessage" class="alert alert-success">
+    {{ successMessage }}<button class="alert-close" (click)="dismissSuccess()">✕</button>
+  </div>
+  <div *ngIf="error" class="alert alert-error">
+    {{ error }}<button class="alert-close" (click)="dismissError()">✕</button>
+  </div>
+  <div *ngIf="versionsError" class="alert alert-error">
+    {{ versionsError }}
+  </div>
+
+  <!-- Cascading Selectors -->
+  <div class="card mb-4">
+    <div class="section-header"><h2 class="section-title">Select Application & Version</h2></div>
+    <div class="form-grid">
+      <div class="form-group">
+        <label>Application Type</label>
+        <select [(ngModel)]="selectedTypeCode" class="form-control" (change)="onTypeChange()">
+          <option value="">-- Select Type --</option>
+          <option *ngFor="let t of applicationTypes" [value]="t.typeCode">{{ t.typeName }}</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Bundle</label>
+        <select [(ngModel)]="selectedBundleCode" class="form-control" (change)="onBundleChange()">
+          <option value="">-- Select Bundle --</option>
+          <option *ngFor="let b of bundles" [value]="b.bundleCode">{{ b.bundleName }}</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Application</label>
+        <select [(ngModel)]="selectedApplicationPublicId" class="form-control" (change)="onApplicationChange()"
+                [disabled]="applications.length === 0">
+          <option value="">-- Select Application --</option>
+          <option *ngFor="let a of applications" [value]="a.publicId">{{ a.applicationName }}</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Requirement Version</label>
+        <select [(ngModel)]="selectedVersionPublicId" class="form-control" (change)="onVersionChange()"
+                [disabled]="versions.length === 0">
+          <option value="">-- Select Version --</option>
+          <option *ngFor="let v of versions" [value]="v.publicId">{{ v.versionCode }} ({{ v.statusLabel }})</option>
+        </select>
+      </div>
+    </div>
+    <div *ngIf="versionsLoading" class="loading-state mt-2"><span class="spinner"></span> Loading requirement versions…</div>
+    <div *ngIf="!versionsLoading && noVersionsAvailable" class="empty-state mt-2">
+      No Requirement Version is available for this application.
+    </div>
+    <div class="form-actions" *ngIf="selectedApplicationPublicId">
+      <button class="btn btn-sm btn-outline" (click)="openVersionForm()">+ New Draft Version</button>
+    </div>
+  </div>
+
+  <!-- New Version Modal -->
+  <div *ngIf="showVersionForm" class="modal-overlay">
+    <div class="modal-box">
+      <h3>Create Draft Requirement Version</h3>
+      <div *ngIf="versionFormError" class="alert alert-error mb-2">{{ versionFormError }}</div>
+      <div class="form-group">
+        <label>Version Code *</label>
+        <input type="text" [(ngModel)]="newVersionCode" class="form-control" placeholder="e.g. v1.0" />
+      </div>
+      <div class="form-group">
+        <label>Version Name *</label>
+        <input type="text" [(ngModel)]="newVersionName" class="form-control" placeholder="e.g. ATLAS Skill Requirements v1.0" />
+      </div>
+      <div class="modal-actions">
+        <button class="btn btn-primary" [disabled]="versionFormSubmitting" (click)="submitVersionForm()">
+          {{ versionFormSubmitting ? 'Creating…' : 'Create' }}
+        </button>
+        <button class="btn btn-secondary" (click)="cancelVersionForm()">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Excel Import Panel -->
+  <div *ngIf="showImportPanel" class="card mb-4">
+    <div class="section-header"><h2 class="section-title">Excel Import — Application Skill Requirement Mapping</h2></div>
+    <div class="form-actions mb-2">
+      <button class="btn btn-outline btn-sm" (click)="downloadTemplate()">⬇ Download Template</button>
+    </div>
+    <input type="file" accept=".xlsx" (change)="onFileSelected($event)" class="form-control mb-2" />
+    <div *ngIf="selectedFile" class="mb-2">
+      Selected: <strong>{{ selectedFile.name }}</strong>
+      <button class="btn btn-sm btn-outline" (click)="clearFile()">Clear</button>
+    </div>
+    <div class="form-actions">
+      <button class="btn btn-primary btn-sm" [disabled]="!selectedFile || validating" (click)="onValidate()">
+        {{ validating ? 'Validating…' : 'Validate' }}
+      </button>
+      <button class="btn btn-success btn-sm" [disabled]="!canConfirmImport" (click)="onConfirmImport()">
+        {{ importing ? 'Importing…' : 'Confirm Import' }}
+      </button>
+    </div>
+
+    <div *ngIf="validationResult" class="mt-2">
+      <p>
+        Total: {{ validationResult.totalRows }} |
+        Insert: {{ validationResult.insertRows }} |
+        Update: {{ validationResult.updateRows }} |
+        Skip: {{ validationResult.skipRows }} |
+        Error: {{ validationResult.errorRows }}
+      </p>
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Row #</th><th>Application</th><th>Skill Code</th><th>Expected Level</th>
+            <th>Mandatory</th><th>Action</th><th>Reason</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let row of validationResult.rows">
+            <td>{{ row.rowNumber }}</td>
+            <td>{{ row.applicationCode }}</td>
+            <td>{{ row.skillCode }}</td>
+            <td>{{ row.expectedLevel }}</td>
+            <td>{{ row.mandatoryFlag }}</td>
+            <td><span class="badge" [class]="'badge-' + row.action.toLowerCase()">{{ row.action }}</span></td>
+            <td>{{ row.reason }}</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div *ngIf="importResult" class="mt-2">
+      <p>{{ importResult.message }}</p>
+    </div>
+  </div>
+
+  <!-- Add/Edit Form -->
+  <div *ngIf="showForm" class="card mb-4">
+    <div class="section-header">
+      <h2 class="section-title">{{ formMode === 'create' ? 'Add Skill Requirement' : 'Edit Skill Requirement' }}</h2>
+    </div>
+    <div *ngIf="formError" class="alert alert-error mb-2">{{ formError }}</div>
+    <div class="form-grid">
+      <div class="form-group" style="grid-column: 1/-1" *ngIf="formMode === 'create'">
+        <label>Skill * (search Skill Master)</label>
+        <input type="text" [(ngModel)]="skillSearchTerm" (ngModelChange)="onSkillSearch()"
+               class="form-control" placeholder="Search by skill code or name…" />
+        <div *ngIf="skillOptions.length > 0" class="dropdown-list">
+          <div *ngFor="let s of skillOptions" class="dropdown-item" (click)="selectSkill(s)">
+            {{ s.skillCode }} — {{ s.skillName }}
+          </div>
+        </div>
+        <div *ngIf="form.skillCodeDisplay" class="mt-1">Selected: <strong>{{ form.skillCodeDisplay }}</strong></div>
+      </div>
+      <div class="form-group" *ngIf="formMode === 'edit'">
+        <label>Skill</label>
+        <input type="text" [value]="form.skillCodeDisplay" class="form-control" disabled />
+      </div>
+      <div class="form-group">
+        <label>Expected Level *</label>
+        <select [(ngModel)]="form.expectedLevel" class="form-control">
+          <option *ngFor="let l of levels" [value]="l">{{ l }}</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Mandatory *</label>
+        <select [(ngModel)]="form.mandatory" class="form-control">
+          <option [ngValue]="true">Yes</option>
+          <option [ngValue]="false">No</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-actions">
+      <button class="btn btn-primary" [disabled]="!isFormValid() || formSubmitting" (click)="submitForm()">
+        {{ formSubmitting ? 'Saving…' : (formMode === 'create' ? 'Create' : 'Save Changes') }}
+      </button>
+      <button class="btn btn-secondary" (click)="cancelForm()">Cancel</button>
+    </div>
+  </div>
+
+  <!-- Requirements List -->
+  <div *ngIf="selectedVersionPublicId" class="card mb-4">
+    <div class="page-header">
+      <h2 class="section-title">Requirements</h2>
+      <button class="btn btn-primary" (click)="openAddForm()">+ Add Requirement</button>
+    </div>
+
+    <div class="filter-row mb-2">
+      <input type="text" [(ngModel)]="searchTerm" placeholder="Search skill code/name…" class="form-control"
+             (keyup.enter)="onSearch()" />
+      <button class="btn btn-primary btn-sm" (click)="onSearch()">Search</button>
+      <select [(ngModel)]="filterSkillGroup" class="form-control" (change)="onFilterChange()">
+        <option value="">All Groups</option>
+        <option *ngFor="let g of skillGroups" [value]="g">{{ g }}</option>
+      </select>
+      <select [(ngModel)]="filterMandatory" class="form-control" (change)="onFilterChange()">
+        <option value="">All</option>
+        <option value="Y">Mandatory</option>
+        <option value="N">Optional</option>
+      </select>
+      <select [(ngModel)]="filterStatus" class="form-control" (change)="onFilterChange()">
+        <option value="">All Status</option>
+        <option value="ACTIVE">Active</option>
+        <option value="INACTIVE">Inactive</option>
+      </select>
+      <button class="btn btn-secondary btn-sm" [disabled]="!hasActiveFilters()" (click)="resetFilters()">Reset</button>
+    </div>
+
+    <div *ngIf="loading" class="loading-state"><span class="spinner"></span> Loading…</div>
+
+    <div *ngIf="!loading && pagedRequirements">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th class="sortable" (click)="onSort('skillCode')">Skill Code {{ sortIcon('skillCode') }}</th>
+            <th class="sortable" (click)="onSort('skillName')">Skill Name {{ sortIcon('skillName') }}</th>
+            <th>Skill Group</th>
+            <th>Category</th>
+            <th class="text-center">Expected Level</th>
+            <th class="text-center">Mandatory</th>
+            <th class="text-center">Status</th>
+            <th class="text-center">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let r of pagedRequirements.content">
+            <td><span class="app-code">{{ r.skillCode }}</span></td>
+            <td class="font-medium">{{ r.skillName }}</td>
+            <td><span class="badge badge-type">{{ r.skillGroup ?? '—' }}</span></td>
+            <td>{{ r.categoryName ?? '—' }}</td>
+            <td class="text-center">{{ r.expectedLevel }}</td>
+            <td class="text-center">
+              <span [class]="r.mandatory ? 'status-active' : 'status-inactive'">
+                {{ r.mandatory ? 'Mandatory' : 'Optional' }}
+              </span>
+            </td>
+            <td class="text-center">
+              <span [class]="r.active ? 'status-active' : 'status-inactive'">
+                {{ r.active ? 'Active' : 'Inactive' }}
+              </span>
+            </td>
+            <td class="text-center actions-cell">
+              <button class="btn btn-sm btn-outline" (click)="openEditForm(r)">Edit</button>
+              <button *ngIf="r.active" class="btn btn-sm btn-danger" (click)="requestDeactivate(r)">Deactivate</button>
+              <button *ngIf="!r.active" class="btn btn-sm btn-success" (click)="activateRequirement(r)">Activate</button>
+            </td>
+          </tr>
+          <tr *ngIf="pagedRequirements.content.length === 0">
+            <td colspan="8" class="empty-state">No skill requirements found for this version.</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div class="pagination-bar" *ngIf="totalPages > 1">
+        <button class="btn btn-sm btn-outline" [disabled]="currentPage === 0" (click)="goToPage(currentPage - 1)">‹ Prev</button>
+        <ng-container *ngFor="let p of pageNumbers()">
+          <span *ngIf="p === -1" class="page-ellipsis">…</span>
+          <button *ngIf="p !== -1" class="btn btn-sm"
+                  [class.btn-primary]="p === currentPage"
+                  [class.btn-outline]="p !== currentPage"
+                  (click)="goToPage(p)">{{ p + 1 }}</button>
+        </ng-container>
+        <button class="btn btn-sm btn-outline" [disabled]="!pagedRequirements.hasNext" (click)="goToPage(currentPage + 1)">Next ›</button>
+      </div>
+      <div class="table-footer">Page {{ currentPage + 1 }} of {{ totalPages }} — {{ pagedRequirements.totalElements }} requirement(s)</div>
+    </div>
+  </div>
+
+  <!-- Deactivate Confirm -->
+  <div *ngIf="confirmDeactivateRequirement" class="modal-overlay">
+    <div class="modal-box">
+      <h3>Confirm Deactivation</h3>
+      <p>Deactivate requirement for skill <strong>{{ confirmDeactivateRequirement.skillCode }}</strong>?</p>
+      <div class="modal-actions">
+        <button class="btn btn-danger" (click)="confirmDeactivate()">Deactivate</button>
+        <button class="btn btn-secondary" (click)="cancelDeactivate()">Cancel</button>
+      </div>
+    </div>
+  </div>
+</div>

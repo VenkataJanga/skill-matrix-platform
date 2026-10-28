@@ -39,4 +39,19 @@ export interface UserMe {
   lastLogin?: string;
 }
 
+export interface ForgotPasswordRequest {
+  usernameOrEmail: string;
+}
+
+export interface ForgotPasswordResponse {
+  message: string;
+  devResetLink?: string;
+}
+
+export interface ResetPasswordRequest {
+  token: string;
+  newPassword: string;
+  confirmPassword: string;
+}
+
 export type UserRole = 'ADMIN' | 'LEAD_MANAGER' | 'TECHNICIAN';

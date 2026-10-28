@@ -101,6 +101,23 @@ app:
     secret: "SkillMatrixPlatformDefaultSecretKey-ChangeInProduction-MustBe256BitsLong!"
     expiration-ms: 900000          # 15 minutes
     refresh-expiration-ms: 604800000  # 7 days
+  # Authentication mode — Okta-readiness scaffold only (see docs/AUTH_ARCHITECTURE.md).
+  # LOCAL = application-managed username/password (dev/pilot/demo).
+  # OKTA  = future production target. Not implemented in this task.
+  auth:
+    mode: LOCAL
+  # Base URL used to build password reset links. Override per environment —
+  # never hardcode localhost in production-capable code paths.
+  frontend-base-url: "http://localhost:4200"
+  password-reset:
+    expiry-minutes: 20
+    dev-expose-token: false   # ONLY ever true under the 'dev' profile
+
+# ============================================================
+# User Management
+# ============================================================
+user-management:
+  hard-delete-enabled: false   # safe default for production; override to true in dev
 
 # ============================================================
 # Application Info

@@ -31,6 +31,19 @@ public class UserApplicationMapping {
     @JoinColumn(name = "application_id", nullable = false)
     private Application application;
 
+    /**
+     * Lookup value for ROLE_ON_APPLICATION (PRIMARY / BACKUP / SME / TRAINEE).
+     * Column already existed in the DB schema (V01) — this JPA mapping was added during
+     * the M4 Multi-Technician Assignment stabilization enhancement with no schema change
+     * required. "Primary" designation is represented today as roleOnAppLookup=PRIMARY;
+     * this field is intentionally kept separate from allocation/effective-date fields so
+     * that a future split of "functional role" vs "primary/backup designation" (e.g.
+     * SME + PRIMARY combined) can be introduced later without a structural refactor.
+     */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "role_on_app_lookup_id")
+    private LookupValue roleOnAppLookup;
+
     @Column(name = "allocation_percentage", nullable = false, precision = 5, scale = 2)
     @Builder.Default
     private BigDecimal allocationPercentage = BigDecimal.valueOf(100.00);

@@ -145,3 +145,16 @@
 @keyframes spin {
   to { transform: rotate(360deg); }
 }
+
+.back-link {
+  text-align: center;
+  margin-top: 1rem;
+
+  a {
+    color: #1565c0;
+    font-size: 0.875rem;
+    text-decoration: none;
+
+    &:hover { text-decoration: underline; }
+  }
+}

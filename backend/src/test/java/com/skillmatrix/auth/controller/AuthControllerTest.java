@@ -4,7 +4,9 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.skillmatrix.auth.dto.*;
 import com.skillmatrix.auth.service.AuthService;
 import com.skillmatrix.auth.service.JwtService;
+import com.skillmatrix.auth.service.PasswordResetService;
 import com.skillmatrix.common.exception.AuthException;
+import com.skillmatrix.common.exception.BusinessException;
 import com.skillmatrix.domain.entity.*;
 import com.skillmatrix.domain.repository.UserRepository;
 import com.skillmatrix.security.UserPrincipal;
@@ -57,6 +59,7 @@ class AuthControllerTest {
     @MockBean AuthService authService;
     @MockBean JwtService jwtService;
     @MockBean UserRepository userRepository;
+    @MockBean PasswordResetService passwordResetService;
 
     private User testUser;
     private UserPrincipal testPrincipal;
@@ -253,5 +256,133 @@ class AuthControllerTest {
     void me_returns401WithoutAuth() throws Exception {
         mockMvc.perform(get("/api/v1/auth/me"))
                 .andExpect(status().isUnauthorized());
+    }
+
+    // ----------------------------------------------------------------
+    // POST /api/v1/auth/forgot-password
+    // ----------------------------------------------------------------
+
+    @Test
+    @DisplayName("POST /forgot-password returns 200 with generic message for existing account")
+    void forgotPassword_existingAccount_returnsGenericMessage() throws Exception {
+        when(passwordResetService.requestReset(any(), any()))
+                .thenReturn(ForgotPasswordResponse.generic());
+
+        mockMvc.perform(post("/api/v1/auth/forgot-password")
+                        .with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"usernameOrEmail\":\"alice\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data.message").value(
+                        "If an active account matches the information provided, password reset instructions will be sent to the registered email address."));
+    }
+
+    @Test
+    @DisplayName("POST /forgot-password returns identical generic message for unknown account")
+    void forgotPassword_unknownAccount_returnsSameGenericMessage() throws Exception {
+        when(passwordResetService.requestReset(any(), any()))
+                .thenReturn(ForgotPasswordResponse.generic());
+
+        mockMvc.perform(post("/api/v1/auth/forgot-password")
+                        .with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"usernameOrEmail\":\"unknown-user-xyz\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data.message").value(
+                        "If an active account matches the information provided, password reset instructions will be sent to the registered email address."))
+                .andExpect(jsonPath("$.data.devResetLink").doesNotExist());
+    }
+
+    @Test
+    @DisplayName("POST /forgot-password returns 400 for blank usernameOrEmail")
+    void forgotPassword_returns400ForBlankInput() throws Exception {
+        mockMvc.perform(post("/api/v1/auth/forgot-password")
+                        .with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"usernameOrEmail\":\"\"}"))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    @DisplayName("POST /forgot-password is accessible without authentication")
+    void forgotPassword_noAuthRequired() throws Exception {
+        when(passwordResetService.requestReset(any(), any()))
+                .thenReturn(ForgotPasswordResponse.generic());
+
+        mockMvc.perform(post("/api/v1/auth/forgot-password")
+                        .with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"usernameOrEmail\":\"alice\"}"))
+                .andExpect(status().isOk());
+    }
+
+    // ----------------------------------------------------------------
+    // POST /api/v1/auth/reset-password
+    // ----------------------------------------------------------------
+
+    @Test
+    @DisplayName("POST /reset-password returns 200 on valid token and matching passwords")
+    void resetPassword_validToken_returns200() throws Exception {
+        doNothing().when(passwordResetService).resetPassword(any(), any(), any());
+
+        mockMvc.perform(post("/api/v1/auth/reset-password")
+                        .with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"token\":\"raw-token-value\",\"newPassword\":\"NewPass8!\",\"confirmPassword\":\"NewPass8!\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.message").value(
+                        "Password reset successfully. Please sign in with your new password."));
+    }
+
+    @Test
+    @DisplayName("POST /reset-password returns 400 for expired/invalid token")
+    void resetPassword_invalidToken_returns400() throws Exception {
+        doThrow(new BusinessException(
+                "This password reset link is invalid or has expired. Please request a new one."))
+                .when(passwordResetService).resetPassword(any(), any(), any());
+
+        mockMvc.perform(post("/api/v1/auth/reset-password")
+                        .with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"token\":\"bad-token\",\"newPassword\":\"NewPass8!\",\"confirmPassword\":\"NewPass8!\"}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.message").value(
+                        "This password reset link is invalid or has expired. Please request a new one."));
+    }
+
+    @Test
+    @DisplayName("POST /reset-password returns 400 for short new password")
+    void resetPassword_returns400ForShortPassword() throws Exception {
+        mockMvc.perform(post("/api/v1/auth/reset-password")
+                        .with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"token\":\"raw-token-value\",\"newPassword\":\"short\",\"confirmPassword\":\"short\"}"))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    @DisplayName("POST /reset-password returns 400 for blank token")
+    void resetPassword_returns400ForBlankToken() throws Exception {
+        mockMvc.perform(post("/api/v1/auth/reset-password")
+                        .with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"token\":\"\",\"newPassword\":\"NewPass8!\",\"confirmPassword\":\"NewPass8!\"}"))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    @DisplayName("POST /reset-password is accessible without authentication")
+    void resetPassword_noAuthRequired() throws Exception {
+        doNothing().when(passwordResetService).resetPassword(any(), any(), any());
+
+        mockMvc.perform(post("/api/v1/auth/reset-password")
+                        .with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"token\":\"raw-token-value\",\"newPassword\":\"NewPass8!\",\"confirmPassword\":\"NewPass8!\"}"))
+                .andExpect(status().isOk());
     }
 }

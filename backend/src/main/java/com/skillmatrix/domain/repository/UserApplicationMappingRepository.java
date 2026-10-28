@@ -22,6 +22,12 @@ public interface UserApplicationMappingRepository extends JpaRepository<UserAppl
 
     boolean existsByUser_IdAndApplication_IdAndActiveTrue(Long userId, Long applicationId);
 
+    /** Used by delete guard: true if the user has ANY assignment (active or historical). */
+    boolean existsByUser_Id(Long userId);
+
+    /** Application Master delete-safety guard: true if the application has ANY assignment (active or historical). */
+    boolean existsByApplication_Id(Long applicationId);
+
     @Query("""
             SELECT uam FROM UserApplicationMapping uam
             JOIN FETCH uam.user u

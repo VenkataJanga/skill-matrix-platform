@@ -1,1 +1,237 @@
-﻿
+﻿// User List page styles — extends global styles from styles.scss
+
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.import-panel-card {
+  border-left: 3px solid #0d6efd;
+
+  .import-panel-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 0.5rem;
+
+    .section-title {
+      margin: 0;
+    }
+  }
+}
+
+// ----------------------------------------------------------------
+// Checkbox column
+// ----------------------------------------------------------------
+.col-check {
+  width: 2.5rem;
+  text-align: center;
+  padding: 0.5rem !important;
+}
+
+// ----------------------------------------------------------------
+// Row selection highlight
+// ----------------------------------------------------------------
+.row-selected {
+  background-color: rgba(13, 110, 253, 0.06) !important;
+}
+
+// ----------------------------------------------------------------
+// Bulk action toolbar
+// ----------------------------------------------------------------
+.bulk-action-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.6rem 1rem;
+  background: #fff3cd;
+  border: 1px solid #ffc107;
+  border-radius: 6px;
+
+  .bulk-count {
+    font-weight: 600;
+    color: #856404;
+  }
+
+  .bulk-actions {
+    display: flex;
+    gap: 0.5rem;
+  }
+}
+
+// ----------------------------------------------------------------
+// Modal extensions
+// ----------------------------------------------------------------
+.dev-link-box {
+  background: #fff8e1;
+  border: 1px dashed #ffb300;
+  border-radius: 8px;
+  padding: 0.75rem 1rem;
+  margin: 1rem 0;
+  word-break: break-all;
+
+  .dev-label {
+    margin: 0 0 0.4rem;
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: #e65100;
+    text-transform: uppercase;
+  }
+
+  .dev-link {
+    font-size: 0.8rem;
+    color: #0d47a1;
+  }
+}
+
+.modal-box-md {
+  width: 100%;
+  max-width: 560px;
+}
+
+.modal-title {
+  margin: 0 0 1rem 0;
+  font-size: 1.15rem;
+  font-weight: 600;
+}
+
+.modal-body {
+  margin-bottom: 1.25rem;
+
+  p {
+    margin: 0 0 0.75rem 0;
+    line-height: 1.5;
+  }
+}
+
+.modal-warning {
+  color: #6c757d;
+  font-size: 0.875rem;
+}
+
+.modal-warning-strong {
+  color: #b91c1c;
+  font-weight: 600;
+}
+
+.mt-3 {
+  margin-top: 1rem;
+}
+
+.text-muted {
+  color: #6c757d;
+  font-size: 0.85rem;
+}
+
+// ----------------------------------------------------------------
+// Delete summary
+// ----------------------------------------------------------------
+.delete-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0.75rem;
+  margin-bottom: 1.25rem;
+
+  @media (max-width: 480px) {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+.summary-stat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 0.75rem 0.5rem;
+  border: 1px solid #dee2e6;
+  border-radius: 6px;
+  background: #f8f9fa;
+
+  .stat-label {
+    font-size: 0.75rem;
+    color: #6c757d;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    margin-bottom: 0.25rem;
+  }
+
+  .stat-value {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #212529;
+  }
+
+  &.stat-deleted {
+    border-color: #198754;
+    background: #d1e7dd;
+    .stat-value { color: #0a3622; }
+  }
+
+  &.stat-warning {
+    border-color: #ffc107;
+    background: #fff3cd;
+    .stat-value { color: #664d03; }
+  }
+
+  &.stat-error {
+    border-color: #dc3545;
+    background: #f8d7da;
+    .stat-value { color: #58151c; }
+  }
+}
+
+.blocked-header {
+  font-size: 0.9rem;
+  font-weight: 600;
+  margin: 0 0 0.5rem 0;
+  color: #495057;
+}
+
+.summary-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.875rem;
+
+  th, td {
+    padding: 0.4rem 0.6rem;
+    border: 1px solid #dee2e6;
+    text-align: left;
+  }
+
+  th {
+    background: #f8f9fa;
+    font-weight: 600;
+  }
+}
+
+// ----------------------------------------------------------------
+// Badge variants for summary
+// ----------------------------------------------------------------
+.badge-warning {
+  background: #fff3cd;
+  color: #664d03;
+  border: 1px solid #ffc107;
+  border-radius: 4px;
+  padding: 0.15rem 0.5rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.badge-error {
+  background: #f8d7da;
+  color: #58151c;
+  border: 1px solid #dc3545;
+  border-radius: 4px;
+  padding: 0.15rem 0.5rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+// ----------------------------------------------------------------
+// Icon-only button
+// ----------------------------------------------------------------
+.btn-icon {
+  padding: 0.2rem 0.45rem !important;
+  line-height: 1;
+}

@@ -6,7 +6,27 @@
         {{ pagedUsers ? pagedUsers.totalElements + ' user(s) total' : 'Loading…' }}
       </p>
     </div>
-    <button class="btn btn-primary" (click)="openAddForm()">+ Add User</button>
+    <div class="header-actions">
+      <button class="btn btn-outline btn-sm" (click)="downloadTemplate()" title="Download blank Excel template">
+        ⬇ Download Template
+      </button>
+      <button class="btn btn-outline btn-sm" (click)="exportUsers()" title="Export current user list to Excel">
+        📤 Export Users
+      </button>
+      <button class="btn btn-secondary btn-sm" (click)="toggleImportPanel()" title="Import users from Excel">
+        📥 Import Users
+      </button>
+      <button class="btn btn-primary" (click)="openAddForm()">+ Add User</button>
+    </div>
+  </div>
+
+  <!-- Import Panel -->
+  <div *ngIf="showImportPanel" class="card mb-4 import-panel-card">
+    <div class="import-panel-header">
+      <h2 class="section-title">Bulk Import Users from Excel</h2>
+      <button class="btn btn-sm btn-outline" (click)="toggleImportPanel()">✕ Close</button>
+    </div>
+    <app-user-import (importCompleted)="onImportCompleted()"></app-user-import>
   </div>
 
   <!-- Alerts -->
@@ -28,6 +48,147 @@
       <div class="modal-actions">
         <button class="btn btn-danger" (click)="confirmDeactivate()">Deactivate</button>
         <button class="btn btn-secondary" (click)="cancelDeactivate()">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Admin Password Reset — Confirm Modal -->
+  <div *ngIf="confirmResetPasswordUser" class="modal-overlay">
+    <div class="modal-box">
+      <h3>Reset Password</h3>
+      <p>
+        Initiate a password reset for <strong>{{ confirmResetPasswordUser.username }}</strong>?
+      </p>
+      <p class="modal-warning">
+        A secure one-time reset link will be generated. You will never see or choose this
+        user's password. The user's active sessions will be invalidated.
+      </p>
+      <div class="modal-actions">
+        <button class="btn btn-secondary" (click)="cancelResetPassword()" [disabled]="isResettingPassword">Cancel</button>
+        <button class="btn btn-primary" (click)="confirmResetPassword()" [disabled]="isResettingPassword">
+          <span *ngIf="isResettingPassword" class="spinner-sm"></span>
+          {{ isResettingPassword ? 'Processing…' : 'Reset Password' }}
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Admin Password Reset — Result Modal -->
+  <div *ngIf="showResetResultModal" class="modal-overlay">
+    <div class="modal-box">
+      <h3>Password Reset Initiated</h3>
+      <p>
+        A password reset has been initiated for <strong>{{ resetResultUsername }}</strong>.
+        The user must complete the reset using the link (or sign in and change their
+        password) to set a new password.
+      </p>
+      <div class="dev-link-box" *ngIf="resetResultDevLink">
+        <p class="dev-label">DEV MODE ONLY — reset link (never shown in production):</p>
+        <a [href]="resetResultDevLink" class="dev-link">{{ resetResultDevLink }}</a>
+      </div>
+      <div class="modal-actions">
+        <button class="btn btn-primary" (click)="closeResetResultModal()">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================================================ -->
+  <!-- Delete Confirmation Modal                                     -->
+  <!-- ============================================================ -->
+  <div *ngIf="showDeleteConfirmModal" class="modal-overlay">
+    <div class="modal-box modal-box-md">
+      <h3 class="modal-title">🗑 {{ deleteModalTitle }}</h3>
+
+      <div class="modal-body">
+        <ng-container *ngIf="deleteSingleTarget; else bulkDeleteInfo">
+          <p>
+            You are about to permanently delete user
+            <strong>{{ deleteSingleTarget.username }}</strong> ({{ deleteSingleTarget.fullName }}).
+          </p>
+        </ng-container>
+        <ng-template #bulkDeleteInfo>
+          <p>You selected <strong>{{ selectedPublicIds.size }}</strong> user(s).</p>
+        </ng-template>
+
+        <p class="modal-warning">
+          The system will verify whether each user can be safely deleted.
+          Users with application assignments, assessments, training history,
+          or other protected records will <strong>not</strong> be permanently deleted.
+        </p>
+        <p class="modal-warning modal-warning-strong">⚠ This operation cannot be undone.</p>
+
+        <div class="form-group mt-3">
+          <label>Reason <span class="text-muted">(optional)</span></label>
+          <textarea [(ngModel)]="deleteReason"
+                    class="form-control"
+                    rows="2"
+                    placeholder="e.g. Removing test users imported during development validation">
+          </textarea>
+        </div>
+      </div>
+
+      <div class="modal-actions">
+        <button class="btn btn-secondary" (click)="cancelDelete()" [disabled]="isDeleting">Cancel</button>
+        <button class="btn btn-danger" (click)="confirmDelete()" [disabled]="isDeleting">
+          <span *ngIf="isDeleting" class="spinner-sm"></span>
+          {{ isDeleting ? 'Deleting…' : 'Delete User' + (deleteTargetCount > 1 ? 's' : '') }}
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================================================ -->
+  <!-- Delete Summary Modal                                          -->
+  <!-- ============================================================ -->
+  <div *ngIf="showDeleteSummary && deleteSummary" class="modal-overlay">
+    <div class="modal-box modal-box-md">
+      <h3 class="modal-title">✅ Delete Completed</h3>
+      <div class="modal-body">
+        <div class="delete-summary-grid">
+          <div class="summary-stat">
+            <span class="stat-label">Requested</span>
+            <span class="stat-value">{{ deleteSummary.requestedCount }}</span>
+          </div>
+          <div class="summary-stat stat-deleted">
+            <span class="stat-label">Deleted</span>
+            <span class="stat-value">{{ deleteSummary.deletedCount }}</span>
+          </div>
+          <div class="summary-stat" [class.stat-warning]="deleteSummary.blockedCount > 0">
+            <span class="stat-label">Blocked</span>
+            <span class="stat-value">{{ deleteSummary.blockedCount }}</span>
+          </div>
+          <div class="summary-stat" [class.stat-error]="deleteSummary.failedCount > 0">
+            <span class="stat-label">Failed</span>
+            <span class="stat-value">{{ deleteSummary.failedCount }}</span>
+          </div>
+        </div>
+
+        <ng-container *ngIf="deleteSummary.results.length > 0">
+          <h4 class="blocked-header">Non-deleted users:</h4>
+          <table class="summary-table">
+            <thead>
+              <tr>
+                <th>Username</th>
+                <th>Status</th>
+                <th>Reason</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let r of deleteSummary.results">
+                <td class="monospace">{{ r.username }}</td>
+                <td>
+                  <span [class]="r.status === 'BLOCKED' ? 'badge-warning' : 'badge-error'">
+                    {{ r.status }}
+                  </span>
+                </td>
+                <td class="text-muted">{{ r.reason }}</td>
+              </tr>
+            </tbody>
+          </table>
+        </ng-container>
+      </div>
+      <div class="modal-actions">
+        <button class="btn btn-primary" (click)="closeSummary()">Close</button>
       </div>
     </div>
   </div>
@@ -135,6 +296,19 @@
     </div>
   </div>
 
+  <!-- Bulk action toolbar — shown when rows are selected -->
+  <div *ngIf="someSelected" class="bulk-action-bar card mb-2">
+    <span class="bulk-count">{{ selectedPublicIds.size }} user(s) selected</span>
+    <div class="bulk-actions">
+      <button class="btn btn-sm btn-outline" (click)="clearSelection()">Clear Selection</button>
+      <button class="btn btn-sm btn-danger"
+              [disabled]="!someSelected"
+              (click)="requestDeleteSelected()">
+        🗑 Delete Selected
+      </button>
+    </div>
+  </div>
+
   <!-- Loading -->
   <div *ngIf="loading" class="loading-state">
     <span class="spinner"></span> Loading users…
@@ -146,6 +320,13 @@
       <table class="data-table">
         <thead>
           <tr>
+            <th class="col-check">
+              <input type="checkbox"
+                     [checked]="allSelected"
+                     [indeterminate]="someSelected && !allSelected"
+                     (change)="toggleSelectAll()"
+                     title="Select all on this page" />
+            </th>
             <th class="sortable" (click)="onSort('fullName')">
               Full Name {{ sortIcon('fullName') }}
             </th>
@@ -161,7 +342,13 @@
           </tr>
         </thead>
         <tbody>
-          <tr *ngFor="let user of pagedUsers.content">
+          <tr *ngFor="let user of pagedUsers.content"
+              [class.row-selected]="isSelected(user.publicId)">
+            <td class="col-check">
+              <input type="checkbox"
+                     [checked]="isSelected(user.publicId)"
+                     (change)="toggleSelect(user.publicId)" />
+            </td>
             <td class="font-medium">{{ user.fullName }}</td>
             <td class="monospace">{{ user.username }}</td>
             <td>{{ user.email }}</td>
@@ -182,10 +369,16 @@
               <button *ngIf="!user.active"
                       class="btn btn-sm btn-success"
                       (click)="activateUser(user)">Activate</button>
+              <button class="btn btn-sm btn-outline"
+                      title="Admin-assisted password reset"
+                      (click)="requestResetPassword(user)">Reset Password</button>
+              <button class="btn btn-sm btn-danger btn-icon"
+                      title="Permanently delete user"
+                      (click)="requestDeleteSingle(user)">🗑</button>
             </td>
           </tr>
           <tr *ngIf="pagedUsers.content.length === 0">
-            <td colspan="6" class="empty-state">No users found matching your criteria.</td>
+            <td colspan="7" class="empty-state">No users found matching your criteria.</td>
           </tr>
         </tbody>
       </table>

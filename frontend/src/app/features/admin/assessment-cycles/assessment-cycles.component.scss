@@ -1,0 +1,129 @@
+.badge {
+  padding: 2px 10px;
+  border-radius: 12px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-transform: capitalize;
+  margin-right: 4px;
+
+  &.planned { background: #e9ecef; color: #495057; }
+  &.open    { background: #e3fcef; color: #087f5b; }
+  &.closed  { background: #ffe3e3; color: #c92a2a; }
+}
+
+.badge-expired {
+  background: #fff3bf;
+  color: #997404;
+  text-transform: none;
+}
+
+.modal-box-sm {
+  max-width: 420px;
+}
+
+.modal-box-md {
+  max-width: 520px;
+}
+
+.field-hint {
+  margin: 6px 0 0;
+  font-size: 0.82rem;
+  line-height: 1.4;
+}
+
+.field-hint-warning {
+  color: #997404;
+}
+
+.field-hint-error {
+  color: #c92a2a;
+}
+
+.duplicate-warning {
+  margin-top: 8px;
+  padding: 10px 12px;
+  background: #fff5f5;
+  border: 1px solid #ffc9c9;
+  border-radius: 6px;
+
+  .field-hint-error {
+    margin: 0 0 6px;
+    font-weight: 600;
+  }
+}
+
+.duplicate-details {
+  font-size: 0.82rem;
+  color: #495057;
+  margin-bottom: 8px;
+
+  div { margin-bottom: 2px; }
+}
+
+/* ---------------------------------------------------------------
+   Professional cycle detail modal
+   --------------------------------------------------------------- */
+.cycle-detail-modal {
+  display: flex;
+  flex-direction: column;
+  max-height: 85vh;
+
+  .modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding-bottom: 0.75rem;
+    margin-bottom: 1rem;
+    border-bottom: 1px solid #eceff1;
+
+    .modal-title { margin: 0; }
+  }
+
+  .modal-close-x {
+    background: transparent;
+    border: none;
+    font-size: 1.4rem;
+    line-height: 1;
+    color: #888;
+    cursor: pointer;
+    padding: 0 0.25rem;
+    border-radius: 4px;
+    transition: color 0.15s, background 0.15s;
+
+    &:hover { color: #c62828; background: #fafafa; }
+  }
+
+  .modal-body {
+    overflow-y: auto;
+    flex: 1;
+  }
+}
+
+.reopen-detail-list {
+  display: grid;
+  grid-template-columns: 130px 1fr;
+  gap: 0.4rem 1rem;
+  margin: 0 0 1rem;
+
+  dt { font-weight: 600; color: #495057; font-size: 0.82rem; }
+  dd { margin: 0; font-size: 0.88rem; color: #222; }
+}
+
+.detail-list {
+  display: grid;
+  grid-template-columns: 170px 1fr;
+  gap: 0.65rem 1rem;
+  margin: 0;
+
+  dt {
+    font-weight: 600;
+    color: #495057;
+    font-size: 0.85rem;
+  }
+
+  dd {
+    margin: 0;
+    font-size: 0.9rem;
+    color: #222;
+  }
+}

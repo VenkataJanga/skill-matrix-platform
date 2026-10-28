@@ -1,6 +1,13 @@
 
 # graphify-axet
-.graphify/
+.graphifyignore
+
+# ============================================================
+# Generated log files — never commit
+# ============================================================
+backend/logs/
+*.log
+*.log.gz
 
 target/
 backend/target/
@@ -8,7 +15,6 @@ backend/target/
 *.jar.original
 *.war
 *.ear
-l
 frontend/node_modules/
 frontend/dist/
 frontend/.angular/
@@ -22,4 +28,3 @@ target/
 *.jar
 *.war
 *.ear
-

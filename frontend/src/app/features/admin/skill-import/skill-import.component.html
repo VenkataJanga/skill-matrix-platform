@@ -1,0 +1,161 @@
+<div class="page-container">
+  <div class="page-header">
+    <div>
+      <h1 class="page-title">Skill Import</h1>
+      <p class="page-subtitle">Upload an Excel file to bulk-insert, update or skip skills (SMART_UPSERT)</p>
+    </div>
+    <button class="btn btn-outline" (click)="downloadTemplate()">⬇ Download Template</button>
+  </div>
+
+  <!-- Alerts -->
+  <div *ngIf="successMessage" class="alert alert-success">
+    {{ successMessage }}<button class="alert-close" (click)="dismissSuccess()">✕</button>
+  </div>
+  <div *ngIf="error" class="alert alert-error">
+    {{ error }}<button class="alert-close" (click)="dismissError()">✕</button>
+  </div>
+
+  <!-- Upload Section -->
+  <div class="card mb-4">
+    <h2 class="section-title">Upload Excel File</h2>
+    <p class="text-muted small mb-2">
+      Sheets: <strong>01_COMMON_TECH_SKILLS</strong> · <strong>02_APP_SPECIFIC_SKILLS</strong> · <strong>03_VW_SPECIFIC_TOOLS</strong>
+    </p>
+
+    <div class="upload-area">
+      <input type="file" id="skillFile" accept=".xlsx,.xls"
+             (change)="onFileSelected($event)" style="display:none" />
+      <label for="skillFile" class="upload-label">
+        <span *ngIf="!selectedFile">📂 Click to select an Excel file (.xlsx)</span>
+        <span *ngIf="selectedFile">📄 {{ selectedFile.name }}</span>
+      </label>
+      <button *ngIf="selectedFile" class="btn btn-secondary btn-sm" (click)="clearFile()">Clear</button>
+    </div>
+
+    <div class="form-actions mt-2">
+      <button class="btn btn-primary"
+              [disabled]="!selectedFile || validating"
+              (click)="onValidate()">
+        <span *ngIf="validating" class="spinner-sm"></span>
+        {{ validating ? 'Validating…' : 'Validate Only' }}
+      </button>
+      <button class="btn btn-success"
+              [disabled]="!canConfirm"
+              (click)="onConfirmImport()">
+        <span *ngIf="importing" class="spinner-sm"></span>
+        {{ importing ? 'Importing…' : 'Confirm Import' }}
+      </button>
+    </div>
+  </div>
+
+  <!-- Validation Result -->
+  <div *ngIf="validationResult" class="card mb-4">
+    <h2 class="section-title">Validation Preview</h2>
+
+    <!-- Summary Bar -->
+    <div class="import-summary"
+         [class.summary-success]="validationResult.errorRows === 0"
+         [class.summary-error]="validationResult.errorRows > 0">
+      <div class="summary-stat">
+        <span class="stat-value">{{ validationResult.totalRows }}</span>
+        <span class="stat-label">Total</span>
+      </div>
+      <div class="summary-stat">
+        <span class="stat-value" style="color:#2e7d32">{{ validationResult.insertRows }}</span>
+        <span class="stat-label">Insert</span>
+      </div>
+      <div class="summary-stat">
+        <span class="stat-value" style="color:#1565c0">{{ validationResult.updateRows }}</span>
+        <span class="stat-label">Update</span>
+      </div>
+      <div class="summary-stat">
+        <span class="stat-value" style="color:#888">{{ validationResult.skipRows }}</span>
+        <span class="stat-label">Skip</span>
+      </div>
+      <div class="summary-stat">
+        <span class="stat-value" style="color:#c62828">{{ validationResult.errorRows }}</span>
+        <span class="stat-label">Error</span>
+      </div>
+    </div>
+
+    <div *ngIf="validationResult.totalRows === 0" class="alert alert-warning mt-2">
+      ⚠ No data rows were found in the uploaded file. The file may be in an incorrect format or use unexpected sheet/column names.<br/>
+      Expected sheets: <strong>01_COMMON_TECH_SKILLS</strong>, <strong>02_APP_SPECIFIC_SKILLS</strong>, <strong>03_VW_SPECIFIC_TOOLS</strong><br/>
+      Expected columns: <strong>skill_code</strong>, <strong>skill_name</strong>, <strong>category_name</strong>, <strong>description</strong>, <strong>is_active</strong><br/>
+      Please use the <strong>⬇ Download Template</strong> button to get the correct format.
+    </div>
+    <div *ngIf="validationResult.totalRows > 0 && validationResult.errorRows === 0" class="alert alert-success mt-2">
+      ✓ No errors — you can click <strong>Confirm Import</strong> to proceed.
+    </div>
+    <div *ngIf="validationResult.totalRows > 0 && validationResult.errorRows > 0" class="alert alert-error mt-2">
+      ✗ {{ validationResult.errorRows }} error row(s) found. Fix the Excel file and re-validate before importing.
+    </div>
+
+    <!-- Row Preview Table -->
+    <div *ngIf="validationResult.rows.length > 0" class="table-wrapper mt-2">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Sheet</th>
+            <th class="text-center">Row #</th>
+            <th>Skill Code</th>
+            <th>Skill Name</th>
+            <th class="text-center">Action</th>
+            <th>Reason / Errors</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let row of validationResult.rows" [class.row-error]="row.action === 'ERROR'">
+            <td class="small monospace">{{ row.sheetName }}</td>
+            <td class="text-center">{{ row.rowNumber }}</td>
+            <td><span class="app-code">{{ row.skillCode ?? '—' }}</span></td>
+            <td>{{ row.skillName ?? '—' }}</td>
+            <td class="text-center">
+              <span [ngClass]="{
+                'badge-insert': row.action === 'INSERT',
+                'badge-update': row.action === 'UPDATE',
+                'badge-skip':   row.action === 'SKIP',
+                'badge-err':    row.action === 'ERROR'
+              }" class="action-badge">{{ row.action }}</span>
+            </td>
+            <td class="small">
+              <span *ngIf="row.fieldErrors.length === 0">{{ row.reason }}</span>
+              <span *ngIf="row.fieldErrors.length > 0">
+                {{ row.reason }}<br/>
+                <span *ngFor="let fe of row.fieldErrors" class="text-danger-cell">• {{ fe }}<br/></span>
+              </span>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Import Result Summary -->
+  <div *ngIf="importResult" class="card">
+    <h2 class="section-title">Import Result</h2>
+    <div class="import-summary" [class.summary-success]="importResult.success">
+      <div class="summary-stat">
+        <span class="stat-value">{{ importResult.totalRows }}</span>
+        <span class="stat-label">Total</span>
+      </div>
+      <div class="summary-stat">
+        <span class="stat-value" style="color:#2e7d32">{{ importResult.insertedRows }}</span>
+        <span class="stat-label">Inserted</span>
+      </div>
+      <div class="summary-stat">
+        <span class="stat-value" style="color:#1565c0">{{ importResult.updatedRows }}</span>
+        <span class="stat-label">Updated</span>
+      </div>
+      <div class="summary-stat">
+        <span class="stat-value" style="color:#888">{{ importResult.skippedRows }}</span>
+        <span class="stat-label">Skipped</span>
+      </div>
+      <div class="summary-stat">
+        <span class="stat-value" style="color:#c62828">{{ importResult.errorRows }}</span>
+        <span class="stat-label">Errors</span>
+      </div>
+    </div>
+    <p class="mt-2">{{ importResult.message }}</p>
+  </div>
+</div>

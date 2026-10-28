@@ -45,7 +45,7 @@ server:
   error:
     include-message: always
     include-binding-errors: always
-    include-stacktrace: on-param
+    include-stacktrace: never
 
 # ============================================================
 # Actuator — expose all in dev
@@ -54,7 +54,7 @@ management:
   endpoints:
     web:
       exposure:
-        include: "*"
+        include: "health,info"
   endpoint:
     health:
       show-details: always
@@ -76,11 +76,29 @@ app:
     secret: "SkillMatrixPlatformDevSecretKey-NotForProduction-MustBe256BitsLongAtLeast!"
     expiration-ms: 900000          # 15 minutes
     refresh-expiration-ms: 604800000  # 7 days
+  auth:
+    mode: LOCAL
+  frontend-base-url: "http://localhost:4200"
+  password-reset:
+    expiry-minutes: 20
+    # DEV-ONLY: exposes the raw reset link in the API response so local
+    # testing works without a configured SMTP server. NEVER set true
+    # outside the 'dev' profile (also code-guarded in PasswordResetService).
+    dev-expose-token: true
 
 # ============================================================
-# Logging — DEBUG for application code in dev
+# User Management — hard delete enabled in dev for test data cleanup
+# ============================================================
+user-management:
+  hard-delete-enabled: true
+
+# ============================================================
+# Logging — file logging enabled for dev, DEBUG for app code
+# logback-spring.xml reads LOG_PATH to set the file directory
 # ============================================================
 logging:
+  file:
+    path: logs     # resolves to backend/logs/ when running from backend/ directory
   level:
     root: INFO
     com.skillmatrix: DEBUG

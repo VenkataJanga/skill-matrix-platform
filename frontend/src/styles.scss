@@ -3,6 +3,57 @@
    Skill Matrix Platform - Global Styles
    ============================================================ */
 
+/* ------------------------------------------------------------
+   Design Tokens (derived from the existing navy/blue identity
+   already used throughout the app — not new colors).
+   Introduced for the Application Master UI modernization;
+   safe to adopt incrementally by other screens over time.
+   ------------------------------------------------------------ */
+:root {
+  --color-primary: #1565c0;
+  --color-primary-dark: #1a237e;
+  --color-primary-hover: #1976d2;
+  --color-primary-subtle: #e3f2fd;
+
+  --color-text-primary: #263238;
+  --color-text-secondary: #6b7a86;
+  --color-text-muted: #8a98a3;
+
+  --color-border: #e2e8ee;
+  --color-border-strong: #cdd7e0;
+
+  --color-surface: #ffffff;
+  --color-surface-subtle: #f5f7fa;
+  --color-app-bg: #f3f5f8;
+
+  --color-success: #2e7d32;
+  --color-success-subtle: #e8f5e9;
+
+  --color-warning: #b26a00;
+  --color-warning-subtle: #fff3e0;
+
+  --color-danger: #c62828;
+  --color-danger-hover: #b71c1c;
+  --color-danger-subtle: #fdecea;
+
+  --color-future: #5e35b1;
+  --color-future-subtle: #ede7f6;
+
+  --table-header-bg: #f1f5f9;
+  --table-row-odd: #ffffff;
+  --table-row-even: #f4f8fc;
+  --table-row-hover: #e8f1fb;
+
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+
+  --shadow-sm: 0 1px 2px rgba(16, 24, 40, 0.06), 0 1px 3px rgba(16, 24, 40, 0.08);
+  --shadow-md: 0 4px 12px rgba(16, 24, 40, 0.08);
+
+  --transition-fast: 160ms ease;
+}
+
 *,
 *::before,
 *::after {
@@ -15,10 +66,10 @@ html,
 body {
   height: 100%;
   margin: 0;
-  font-family: "Segoe UI", Roboto, Arial, sans-serif;
+  font-family: Inter, "Segoe UI", Roboto, Arial, sans-serif;
   font-size: 16px;
-  color: #333;
-  background: #f5f7fa;
+  color: var(--color-text-primary);
+  background: var(--color-app-bg);
   -webkit-font-smoothing: antialiased;
 }
 
@@ -639,6 +690,89 @@ button {
   margin-top: 0.2rem;
   color: #c62828;
 }
+
+/* ============================================================
+   M3 — Skill Import / Upload Styles
+   ============================================================ */
+
+.upload-area {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 0.5rem;
+}
+
+.upload-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1.25rem;
+  border: 2px dashed #c8d6e5;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 0.875rem;
+  color: #555;
+  background: #f8fafc;
+  transition: border-color 0.2s;
+  flex: 1;
+
+  &:hover { border-color: #1565c0; }
+}
+
+/* Import summary stats row */
+.import-summary {
+  display: flex;
+  gap: 2rem;
+  padding: 1rem 1.25rem;
+  border-radius: 8px;
+  background: #f5f7fa;
+
+  &.summary-success { background: #e8f5e9; }
+  &.summary-error   { background: #fce4ec; }
+}
+
+.summary-stat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.2rem;
+}
+
+.stat-value {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #1a237e;
+}
+
+.stat-label {
+  font-size: 0.75rem;
+  color: #888;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.text-success  { color: #2e7d32 !important; }
+.text-danger   { color: #c62828 !important; }
+.text-danger-cell { color: #c62828; font-size: 0.875rem; }
+
+/* SMART_UPSERT action badges */
+.action-badge {
+  display: inline-block;
+  padding: 0.15rem 0.55rem;
+  border-radius: 10px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.badge-insert { background: #e8f5e9; color: #2e7d32; }
+.badge-update { background: #e3f2fd; color: #1565c0; }
+.badge-skip   { background: #eceff1; color: #546e7a; }
+.badge-err    { background: #fce4ec; color: #c62828; }
+
+/* Error row highlight in preview table */
+.row-error td { background: #fff8f8 !important; }
 
 /* ============================================================
    Scrollbar

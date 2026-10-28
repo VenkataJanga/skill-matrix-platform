@@ -1,0 +1,144 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Skill Matrix Platform — Logback Configuration
+  ============================================================
+  Appenders:
+    CONSOLE — always active; ECS/Fargate-friendly stdout (CloudWatch collects this)
+    FILE    — rolling daily, active for dev/qa profiles only
+
+  Log format:
+    timestamp | level | [app] | [correlationId=X] | [thread] | logger | message
+
+  AWS CloudWatch Log Group (ECS): /aws/ecs/skill-matrix-platform/backend
+  Local dev file:                 backend/logs/skill-matrix-platform.log
+-->
+<configuration scan="true" scanPeriod="30 seconds">
+
+    <!-- ============================================================
+         Properties
+    ============================================================ -->
+    <property name="APP_NAME"  value="skill-matrix"/>
+    <property name="LOG_DIR"   value="${LOG_PATH:-logs}"/>
+    <property name="LOG_FILE"  value="${LOG_DIR}/skill-matrix-platform"/>
+
+    <!-- Log pattern — includes correlation ID from MDC -->
+    <property name="LOG_PATTERN"
+              value="%d{yyyy-MM-dd HH:mm:ss.SSS} %-5level [${APP_NAME}] [correlationId=%X{correlationId:-NONE}] [%thread] %logger{36} - %msg%n"/>
+
+    <!-- ============================================================
+         Console Appender (stdout — used by all environments incl. ECS)
+    ============================================================ -->
+    <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder>
+            <pattern>${LOG_PATTERN}</pattern>
+            <charset>UTF-8</charset>
+        </encoder>
+    </appender>
+
+    <!-- ============================================================
+         Async Console (non-blocking, recommended for production)
+    ============================================================ -->
+    <appender name="ASYNC_CONSOLE" class="ch.qos.logback.classic.AsyncAppender">
+        <queueSize>512</queueSize>
+        <discardingThreshold>0</discardingThreshold>
+        <includeCallerData>false</includeCallerData>
+        <appender-ref ref="CONSOLE"/>
+    </appender>
+
+    <!-- ============================================================
+         Rolling File Appender (dev/qa only)
+         - Daily rolling + size-based rolling
+         - Retains 30 days / max 1 GB total
+         - Files gzip-compressed on roll
+    ============================================================ -->
+    <appender name="FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <file>${LOG_FILE}.log</file>
+        <encoder>
+            <pattern>${LOG_PATTERN}</pattern>
+            <charset>UTF-8</charset>
+        </encoder>
+        <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
+            <fileNamePattern>${LOG_FILE}.%d{yyyy-MM-dd}.%i.log.gz</fileNamePattern>
+            <maxFileSize>50MB</maxFileSize>
+            <maxHistory>30</maxHistory>
+            <totalSizeCap>1GB</totalSizeCap>
+        </rollingPolicy>
+    </appender>
+
+    <!-- ============================================================
+         Logger configuration — base (all environments)
+    ============================================================ -->
+    <!-- Suppress noisy framework loggers -->
+    <logger name="org.springframework.web.servlet.mvc.method"  level="WARN"/>
+    <logger name="org.springframework.boot.autoconfigure"       level="WARN"/>
+    <logger name="com.zaxxer.hikari"                            level="INFO"/>
+    <logger name="org.flywaydb"                                 level="INFO"/>
+
+    <!-- Application packages -->
+    <logger name="com.skillmatrix" level="INFO" additivity="false">
+        <appender-ref ref="ASYNC_CONSOLE"/>
+    </logger>
+
+    <!-- ============================================================
+         Spring Profile: dev
+         - Enable file logging
+         - Allow DEBUG for application code
+    ============================================================ -->
+    <springProfile name="dev">
+        <logger name="com.skillmatrix" level="DEBUG" additivity="false">
+            <appender-ref ref="ASYNC_CONSOLE"/>
+            <appender-ref ref="FILE"/>
+        </logger>
+        <logger name="org.springframework.security" level="DEBUG" additivity="false">
+            <appender-ref ref="ASYNC_CONSOLE"/>
+            <appender-ref ref="FILE"/>
+        </logger>
+        <logger name="org.hibernate.SQL" level="DEBUG" additivity="false">
+            <appender-ref ref="ASYNC_CONSOLE"/>
+            <appender-ref ref="FILE"/>
+        </logger>
+        <root level="INFO">
+            <appender-ref ref="ASYNC_CONSOLE"/>
+            <appender-ref ref="FILE"/>
+        </root>
+    </springProfile>
+
+    <!-- ============================================================
+         Spring Profile: qa
+         - File logging enabled, no DEBUG
+    ============================================================ -->
+    <springProfile name="qa">
+        <logger name="com.skillmatrix" level="INFO" additivity="false">
+            <appender-ref ref="ASYNC_CONSOLE"/>
+            <appender-ref ref="FILE"/>
+        </logger>
+        <root level="WARN">
+            <appender-ref ref="ASYNC_CONSOLE"/>
+            <appender-ref ref="FILE"/>
+        </root>
+    </springProfile>
+
+    <!-- ============================================================
+         Spring Profile: prod
+         - Console only (ECS stdout → CloudWatch)
+         - No file logging inside container
+    ============================================================ -->
+    <springProfile name="prod">
+        <logger name="com.skillmatrix" level="INFO" additivity="false">
+            <appender-ref ref="ASYNC_CONSOLE"/>
+        </logger>
+        <root level="WARN">
+            <appender-ref ref="ASYNC_CONSOLE"/>
+        </root>
+    </springProfile>
+
+    <!-- ============================================================
+         Default root (no profile active)
+    ============================================================ -->
+    <springProfile name="!dev &amp; !qa &amp; !prod">
+        <root level="INFO">
+            <appender-ref ref="ASYNC_CONSOLE"/>
+        </root>
+    </springProfile>
+
+</configuration>

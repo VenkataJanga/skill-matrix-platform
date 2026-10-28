@@ -1,0 +1,103 @@
+<div class="page-container">
+  <div class="page-header">
+    <div>
+      <h1 class="page-title">Import History</h1>
+      <p class="page-subtitle">
+        {{ pagedHistory ? pagedHistory.totalElements + ' import record(s)' : 'Loading…' }}
+      </p>
+    </div>
+  </div>
+
+  <div *ngIf="error" class="alert alert-error">{{ error }}</div>
+
+  <!-- Filter toolbar -->
+  <div class="filter-toolbar card mb-4">
+    <div class="filter-row">
+      <div class="form-group filter-select">
+        <label>Status</label>
+        <select [(ngModel)]="filterStatus" class="form-control" (change)="onFilterChange()">
+          <option value="">All</option>
+          <option value="SUCCESS">Success</option>
+          <option value="FAILED">Failed</option>
+          <option value="PARTIAL">Partial</option>
+          <option value="IN_PROGRESS">In Progress</option>
+        </select>
+      </div>
+      <div class="form-group filter-select">
+        <label>Uploaded By</label>
+        <input type="text" [(ngModel)]="filterUploadedBy" class="form-control"
+               placeholder="Username…" (keyup.enter)="onFilterChange()" />
+      </div>
+      <div class="form-group filter-select">
+        <label>From Date</label>
+        <input type="date" [(ngModel)]="filterFromDate" class="form-control" (change)="onFilterChange()" />
+      </div>
+      <div class="form-group filter-select">
+        <label>To Date</label>
+        <input type="date" [(ngModel)]="filterToDate" class="form-control" (change)="onFilterChange()" />
+      </div>
+      <div class="form-group" style="align-self: flex-end">
+        <button class="btn btn-secondary btn-sm"
+                [disabled]="!hasActiveFilters()"
+                (click)="resetFilters()"
+                title="Clear filters">Reset</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Loading -->
+  <div *ngIf="loading" class="loading-state"><span class="spinner"></span> Loading history…</div>
+
+  <!-- Table -->
+  <div *ngIf="!loading && pagedHistory" class="card">
+    <div class="table-wrapper">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>File Name</th>
+            <th>Template Type</th>
+            <th class="text-center">Total</th>
+            <th class="text-center">Success</th>
+            <th class="text-center">Failed</th>
+            <th class="text-center">Status</th>
+            <th>Uploaded By</th>
+            <th>Started At</th>
+            <th>Completed At</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let h of pagedHistory.content">
+            <td class="monospace small">{{ h.fileName ?? '—' }}</td>
+            <td><span class="badge badge-type">{{ h.templateType }}</span></td>
+            <td class="text-center">{{ h.totalRows ?? '—' }}</td>
+            <td class="text-center">
+              <span class="status-active">{{ h.successRows ?? '—' }}</span>
+            </td>
+            <td class="text-center">
+              <span [class]="(h.failedRows ?? 0) > 0 ? 'status-inactive' : 'text-muted'">
+                {{ h.failedRows ?? '0' }}
+              </span>
+            </td>
+            <td class="text-center">
+              <span [class]="statusClass(h.statusCode)">{{ h.statusLabel ?? h.statusCode ?? '—' }}</span>
+            </td>
+            <td>
+              <div class="font-medium">{{ h.initiatedByFullName }}</div>
+              <div class="text-muted small">{{ h.initiatedByUsername }}</div>
+            </td>
+            <td class="small">{{ h.startedAt | date:'dd MMM HH:mm' }}</td>
+            <td class="small">{{ h.completedAt ? (h.completedAt | date:'dd MMM HH:mm') : '—' }}</td>
+          </tr>
+          <tr *ngIf="pagedHistory.content.length === 0">
+            <td colspan="9" class="empty-state">No import records found.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="pagination-bar" *ngIf="totalPages > 1">
+      <button class="btn btn-sm btn-outline" [disabled]="currentPage === 0" (click)="goToPage(currentPage - 1)">‹ Prev</button>
+      <button class="btn btn-sm btn-outline" [disabled]="!pagedHistory.hasNext" (click)="goToPage(currentPage + 1)">Next ›</button>
+    </div>
+    <div class="table-footer">Page {{ currentPage + 1 }} of {{ totalPages }} — {{ pagedHistory.totalElements }} record(s)</div>
+  </div>
+</div>

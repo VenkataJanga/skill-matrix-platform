@@ -1,0 +1,313 @@
+<div class="app-master-page">
+  <!-- Page Header -->
+  <header class="page-header">
+    <div class="header-text">
+      <h1 class="page-title">Application Master</h1>
+      <p class="page-subtitle">Manage applications, lifecycle status, hierarchy and bulk application data.</p>
+    </div>
+    <div class="header-actions">
+      <button class="btn btn-tertiary" (click)="downloadTemplate()" title="Download Excel import template" aria-label="Download Template">
+        <span class="btn-icon-glyph">⬇</span> Download Template
+      </button>
+      <button class="btn btn-outline" (click)="openImportModal()" title="Import applications from Excel" aria-label="Import Applications">
+        <span class="btn-icon-glyph">⬆</span> Import Applications
+      </button>
+      <button class="btn btn-tertiary" (click)="exportApplications()" title="Export current list to Excel" aria-label="Export">
+        <span class="btn-icon-glyph">⬇</span> Export
+      </button>
+      <button class="btn btn-primary" (click)="openAddForm()" title="Create a new application" aria-label="New Application">
+        <span class="btn-icon-glyph">+</span> New Application
+      </button>
+    </div>
+  </header>
+
+  <div class="alert alert-success" *ngIf="successMessage">
+    {{ successMessage }}
+    <button class="close-btn" (click)="dismissSuccess()" aria-label="Dismiss">&times;</button>
+  </div>
+  <div class="alert alert-error" *ngIf="error">
+    <div class="alert-error-body">
+      <strong>Unable to load applications.</strong>
+      <span>{{ error }}</span>
+    </div>
+    <div class="alert-error-actions">
+      <button class="btn btn-sm btn-outline" (click)="load()">Retry</button>
+      <button class="close-btn" (click)="dismissError()" aria-label="Dismiss">&times;</button>
+    </div>
+  </div>
+
+  <!-- Filter Card -->
+  <div class="card filter-card mb-4">
+    <div class="filter-grid">
+      <div class="form-group filter-search">
+        <label>Search applications</label>
+        <input type="text" class="form-control" placeholder="Search by code or name..."
+               [(ngModel)]="searchTerm" (keyup.enter)="onSearch()" />
+      </div>
+      <div class="form-group">
+        <label>Application Type</label>
+        <select class="form-control" [(ngModel)]="filterTypeCode" (change)="onFilterChange()">
+          <option value="">All Types</option>
+          <option *ngFor="let t of applicationTypes" [value]="t.typeCode">{{ t.typeName }}</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Bundle</label>
+        <select class="form-control" [(ngModel)]="filterBundleCode" (change)="onFilterChange()">
+          <option value="">All Bundles</option>
+          <option *ngFor="let b of bundles" [value]="b.bundleCode">{{ b.bundleName }}</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Lifecycle Status</label>
+        <select class="form-control" [(ngModel)]="filterLifecycleStatus" (change)="onFilterChange()">
+          <option value="">All Lifecycle Statuses</option>
+          <option *ngFor="let s of lifecycleStatuses" [value]="s">{{ s }}</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Record Status</label>
+        <select class="form-control" [(ngModel)]="filterStatus" (change)="onFilterChange()">
+          <option value="">All (Active/Inactive)</option>
+          <option value="ACTIVE">Active</option>
+          <option value="INACTIVE">Inactive</option>
+        </select>
+      </div>
+    </div>
+    <div class="filter-actions">
+      <button class="btn btn-primary btn-sm" (click)="onSearch()">Search</button>
+      <button class="btn btn-ghost btn-sm" *ngIf="hasActiveFilters()" (click)="resetFilters()">Reset</button>
+    </div>
+  </div>
+
+  <!-- Table Card -->
+  <div class="card table-card mb-4" *ngIf="!loading">
+    <div class="table-wrapper">
+      <table class="data-table app-master-table">
+        <thead>
+          <tr>
+            <th class="sortable" (click)="onSort('applicationCode')">Code <span class="sort-icon">{{ sortIcon('applicationCode') }}</span></th>
+            <th class="sortable" (click)="onSort('applicationName')">Name <span class="sort-icon">{{ sortIcon('applicationName') }}</span></th>
+            <th>Type</th>
+            <th>Bundle</th>
+            <th>Portfolio</th>
+            <th>Lifecycle Status</th>
+            <th class="text-center">Active</th>
+            <th>Created By</th>
+            <th class="text-center">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let a of pagedApplications?.content">
+            <td><span class="app-code-strong">{{ a.applicationCode }}</span></td>
+            <td class="font-medium">{{ a.applicationName }}</td>
+            <td class="text-muted">{{ a.typeName }}</td>
+            <td class="text-muted">{{ a.bundleName }}</td>
+            <td class="text-muted">{{ a.portfolioCode }}</td>
+            <td>
+              <span class="status-pill" [ngClass]="'status-pill-' + (a.lifecycleStatusCode?.toLowerCase() ?? 'default')">
+                {{ a.lifecycleStatusLabel ?? a.lifecycleStatusCode }}
+              </span>
+            </td>
+            <td class="text-center">
+              <span class="active-chip" [class.active-chip-on]="a.active" [class.active-chip-off]="!a.active">
+                <span class="dot"></span>{{ a.active ? 'Active' : 'Inactive' }}
+              </span>
+            </td>
+            <td class="text-muted">{{ a.createdBy }}</td>
+            <td class="text-center">
+              <div class="actions-cell">
+                <button class="btn-row-action" (click)="openEditForm(a)" title="Edit application" [attr.aria-label]="'Edit ' + a.applicationCode">
+                  ✎ Edit
+                </button>
+                <button class="btn-row-action btn-row-action-warning" *ngIf="a.active" (click)="requestDeactivate(a)" title="Deactivate application" [attr.aria-label]="'Deactivate ' + a.applicationCode">
+                  ⏸ Deactivate
+                </button>
+                <button class="btn-row-action btn-row-action-positive" *ngIf="!a.active" (click)="activateApp(a)" title="Activate application" [attr.aria-label]="'Activate ' + a.applicationCode">
+                  ▸ Activate
+                </button>
+                <button class="btn-row-action btn-row-action-danger" (click)="requestDelete(a)" title="Delete application" [attr.aria-label]="'Delete ' + a.applicationCode">
+                  🗑 Delete
+                </button>
+              </div>
+            </td>
+          </tr>
+          <tr *ngIf="pagedApplications?.content?.length === 0">
+            <td colspan="9">
+              <div class="empty-state">
+                <p class="empty-state-title">No applications found.</p>
+                <p class="empty-state-subtext" *ngIf="hasActiveFilters()">Try changing your search or filters.</p>
+                <p class="empty-state-subtext" *ngIf="!hasActiveFilters()">No applications have been configured yet.</p>
+                <button class="btn btn-primary btn-sm mt-2" *ngIf="!hasActiveFilters()" (click)="openAddForm()">+ New Application</button>
+              </div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Pagination -->
+    <div class="pagination-bar" *ngIf="pagedApplications && pagedApplications.totalElements > 0">
+      <div class="pagination-summary">
+        Page {{ currentPage + 1 }} of {{ totalPages }} — {{ pagedApplications.totalElements }} application(s)
+      </div>
+      <div class="pagination-controls" *ngIf="totalPages > 1">
+        <button class="btn btn-sm btn-outline" [disabled]="currentPage === 0" (click)="goToPage(currentPage - 1)">‹ Previous</button>
+        <button class="btn btn-sm btn-outline" [disabled]="currentPage >= totalPages - 1" (click)="goToPage(currentPage + 1)">Next ›</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="loading-state card mb-4" *ngIf="loading"><span class="spinner"></span> Loading applications…</div>
+
+  <!-- Create/Edit Form Modal -->
+  <div class="modal-overlay" *ngIf="showForm" (click)="cancelForm()">
+    <div class="modal-box" (click)="$event.stopPropagation()">
+      <h3 class="modal-title">{{ formMode === 'create' ? 'New Application' : 'Edit Application' }}</h3>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label>Application Type *</label>
+          <select class="form-control" [(ngModel)]="form.applicationTypeCode">
+            <option value="">Select Type</option>
+            <option *ngFor="let t of applicationTypes" [value]="t.typeCode">{{ t.typeName }}</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Bundle *</label>
+          <select class="form-control" [(ngModel)]="form.bundleCode">
+            <option value="">Select Bundle</option>
+            <option *ngFor="let b of bundles" [value]="b.bundleCode">{{ b.bundleName }}</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label>Portfolio Code *</label>
+        <input type="text" class="form-control" [(ngModel)]="form.portfolioCode" placeholder="e.g. B06-WEB" />
+        <p class="field-hint">Must match an existing Portfolio for the selected Type + Bundle combination.</p>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label>Application Code *</label>
+          <input type="text" class="form-control" [(ngModel)]="form.applicationCode"
+                 [disabled]="formMode === 'edit'" placeholder="e.g. IFA" />
+        </div>
+        <div class="form-group">
+          <label>Application Name *</label>
+          <input type="text" class="form-control" [(ngModel)]="form.applicationName" placeholder="e.g. IFA Application" />
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label>Lifecycle Status</label>
+        <select class="form-control" [(ngModel)]="form.lifecycleStatusCode">
+          <option *ngFor="let s of lifecycleStatuses" [value]="s">{{ s }}</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label>Description</label>
+        <textarea class="form-control" rows="2" [(ngModel)]="form.description"></textarea>
+      </div>
+
+      <div class="form-group">
+        <label>Remarks</label>
+        <textarea class="form-control" rows="2" [(ngModel)]="form.remarks"></textarea>
+      </div>
+
+      <div class="alert alert-error" *ngIf="formError">{{ formError }}</div>
+
+      <div class="modal-actions">
+        <button class="btn btn-secondary" (click)="cancelForm()">Cancel</button>
+        <button class="btn btn-primary" [disabled]="!isFormValid() || formSubmitting" (click)="submitForm()">
+          {{ formSubmitting ? 'Saving...' : 'Save' }}
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Deactivate confirmation -->
+  <div class="modal-overlay" *ngIf="confirmDeactivateApp" (click)="cancelDeactivate()">
+    <div class="modal-box modal-box-sm" (click)="$event.stopPropagation()">
+      <h3 class="modal-title">Deactivate Application?</h3>
+      <p><strong>{{ confirmDeactivateApp.applicationCode }}</strong> will no longer be available for new assignments, requirements or assessment cycles.</p>
+      <p class="field-hint">Historical data will remain available.</p>
+      <div class="modal-actions">
+        <button class="btn btn-secondary" (click)="cancelDeactivate()">Cancel</button>
+        <button class="btn btn-warning" (click)="confirmDeactivate()">Deactivate</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Delete confirmation -->
+  <div class="modal-overlay" *ngIf="confirmDeleteApp" (click)="cancelDelete()">
+    <div class="modal-box modal-box-sm" (click)="$event.stopPropagation()">
+      <h3 class="modal-title">Delete Application?</h3>
+      <p>You are about to delete <strong>{{ confirmDeleteApp.applicationCode }}</strong>.</p>
+      <p class="field-hint">This action is only permitted when the application has no business dependencies.</p>
+      <div class="alert alert-error" *ngIf="deleteBlockedReason">
+        <strong>Delete Blocked:</strong> {{ deleteBlockedReason }}
+      </div>
+      <div class="modal-actions">
+        <button class="btn btn-secondary" (click)="cancelDelete()">Cancel</button>
+        <button class="btn btn-danger" (click)="confirmDelete()" *ngIf="!deleteBlockedReason">Delete Application</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Import Modal -->
+  <div class="modal-overlay" *ngIf="showImportModal" (click)="closeImportModal()">
+    <div class="modal-box modal-box-md" (click)="$event.stopPropagation()">
+      <h3 class="modal-title">Import Applications</h3>
+
+      <div class="form-group">
+        <input type="file" accept=".xlsx" (change)="onFileSelected($event)" />
+      </div>
+
+      <div class="modal-actions" *ngIf="selectedFile && !validationResult">
+        <button class="btn btn-primary" [disabled]="validating" (click)="onValidate()">
+          {{ validating ? 'Validating...' : 'Validate' }}
+        </button>
+      </div>
+
+      <div class="import-preview" *ngIf="validationResult">
+        <p>
+          Total: {{ validationResult.totalRows }} |
+          Insert: {{ validationResult.insertRows }} |
+          Update: {{ validationResult.updateRows }} |
+          Skip: {{ validationResult.skipRows }} |
+          Error: {{ validationResult.errorRows }}
+        </p>
+        <table class="data-table" *ngIf="validationResult.rows.length > 0">
+          <thead>
+            <tr><th>Row</th><th>Code</th><th>Name</th><th>Action</th><th>Reason</th></tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let r of validationResult.rows" [class.row-error]="r.action === 'ERROR'">
+              <td>{{ r.rowNumber }}</td>
+              <td>{{ r.applicationCode }}</td>
+              <td>{{ r.applicationName }}</td>
+              <td><span class="badge" [ngClass]="r.action.toLowerCase()">{{ r.action }}</span></td>
+              <td>{{ r.reason }}</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <div class="alert alert-error" *ngIf="importError">{{ importError }}</div>
+        <div class="alert alert-success" *ngIf="importResult?.success">{{ importResult?.message }}</div>
+
+        <div class="modal-actions">
+          <button class="btn btn-primary" [disabled]="!canConfirmImport" (click)="onConfirmImport()">
+            {{ importing ? 'Importing...' : 'Confirm Import' }}
+          </button>
+        </div>
+      </div>
+
+      <div class="modal-actions">
+        <button class="btn btn-secondary" (click)="closeImportModal()">Close</button>
+      </div>
+    </div>
+  </div>
+</div>

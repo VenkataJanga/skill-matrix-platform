@@ -1,0 +1,215 @@
+<div class="page-container">
+  <div class="page-header">
+    <div>
+      <h1 class="page-title">Skill Management</h1>
+      <p class="page-subtitle">
+        {{ pagedSkills ? pagedSkills.totalElements + ' skill(s) total' : 'Loading…' }}
+      </p>
+    </div>
+    <div class="header-actions">
+      <button class="btn btn-tertiary" (click)="downloadTemplate()" title="Download Excel import template" aria-label="Download Template">
+        <span class="btn-icon-glyph">⬇</span> Download Template
+      </button>
+      <button class="btn btn-outline" (click)="openImportModal()" title="Import skills from Excel" aria-label="Import Skills">
+        <span class="btn-icon-glyph">⬆</span> Import Skills
+      </button>
+      <button class="btn btn-tertiary" (click)="exportSkills()" title="Export current skill list to Excel" aria-label="Export Skills">
+        <span class="btn-icon-glyph">⬇</span> Export Skills
+      </button>
+      <a routerLink="/admin/import-history" class="btn btn-tertiary" title="View past skill import operations" aria-label="Import History">
+        <span class="btn-icon-glyph">📜</span> Import History
+      </a>
+      <button class="btn btn-primary" (click)="openAddForm()">+ Add Skill</button>
+    </div>
+  </div>
+
+  <!-- Alerts -->
+  <div *ngIf="successMessage" class="alert alert-success">
+    {{ successMessage }}<button class="alert-close" (click)="dismissSuccess()">✕</button>
+  </div>
+  <div *ngIf="error" class="alert alert-error">
+    {{ error }}<button class="alert-close" (click)="dismissError()">✕</button>
+  </div>
+
+  <!-- Deactivate Confirm -->
+  <div *ngIf="confirmDeactivateSkill" class="modal-overlay">
+    <div class="modal-box">
+      <h3>Confirm Deactivation</h3>
+      <p>Deactivate skill <strong>{{ confirmDeactivateSkill.skillCode }}</strong>?</p>
+      <div class="modal-actions">
+        <button class="btn btn-danger" (click)="confirmDeactivate()">Deactivate</button>
+        <button class="btn btn-secondary" (click)="cancelDeactivate()">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Add/Edit Form -->
+  <div *ngIf="showForm" class="card mb-4">
+    <div class="section-header">
+      <h2 class="section-title">{{ formMode === 'create' ? 'Add New Skill' : 'Edit Skill' }}</h2>
+    </div>
+    <div *ngIf="formError" class="alert alert-error mb-2">{{ formError }}</div>
+    <div class="form-grid">
+      <div class="form-group">
+        <label>Skill Code *</label>
+        <input type="text" [(ngModel)]="form.skillCode" class="form-control"
+               [disabled]="formMode === 'edit'" placeholder="e.g. SQL_QUERY" />
+      </div>
+      <div class="form-group">
+        <label>Skill Name *</label>
+        <input type="text" [(ngModel)]="form.skillName" class="form-control" />
+      </div>
+      <div class="form-group">
+        <label>Category *</label>
+        <select [(ngModel)]="form.categoryCode" class="form-control">
+          <option value="">-- Select Category --</option>
+          <option *ngFor="let c of categories" [value]="c.categoryCode">{{ c.categoryName }}</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Scope *</label>
+        <select [(ngModel)]="form.scopeCode" class="form-control">
+          <option value="">-- Select Scope --</option>
+          <option *ngFor="let s of scopes" [value]="s">{{ s }}</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Skill Type</label>
+        <select [(ngModel)]="form.skillTypeCode" class="form-control">
+          <option value="">-- Optional --</option>
+          <option *ngFor="let t of skillTypes" [value]="t">{{ t }}</option>
+        </select>
+      </div>
+      <div class="form-group" *ngIf="form.scopeCode === 'APPLICATION_TYPE'">
+        <label>Application Type</label>
+        <select [(ngModel)]="form.applicationTypeCode" class="form-control">
+          <option value="">-- Select --</option>
+          <option *ngFor="let t of applicationTypes" [value]="t.typeCode">{{ t.typeName }}</option>
+        </select>
+      </div>
+      <div class="form-group" *ngIf="form.scopeCode === 'BUNDLE'">
+        <label>Bundle</label>
+        <select [(ngModel)]="form.bundleCode" class="form-control">
+          <option value="">-- Select --</option>
+          <option *ngFor="let b of bundles" [value]="b.bundleCode">{{ b.bundleName }}</option>
+        </select>
+      </div>
+      <div class="form-group" style="grid-column: 1/-1">
+        <label>Description</label>
+        <input type="text" [(ngModel)]="form.description" class="form-control" />
+      </div>
+    </div>
+    <div class="form-actions">
+      <button class="btn btn-primary" [disabled]="!isFormValid() || formSubmitting" (click)="submitForm()">
+        <span *ngIf="formSubmitting" class="spinner-sm"></span>
+        {{ formSubmitting ? 'Saving…' : (formMode === 'create' ? 'Create Skill' : 'Save Changes') }}
+      </button>
+      <button class="btn btn-secondary" (click)="cancelForm()">Cancel</button>
+    </div>
+  </div>
+
+  <!-- Filter toolbar -->
+  <div class="filter-toolbar card mb-4">
+    <div class="filter-row">
+      <div class="search-box">
+        <input type="text" [(ngModel)]="searchTerm"
+               placeholder="Search by code, name or description…"
+               class="form-control" (keyup.enter)="onSearch()" />
+        <button class="btn btn-primary btn-sm" (click)="onSearch()">Search</button>
+        <button class="btn btn-secondary btn-sm"
+                [disabled]="!hasActiveFilters()"
+                (click)="resetFilters()"
+                title="Clear search and filters">Reset</button>
+      </div>
+      <div class="form-group filter-select">
+        <label>Category</label>
+        <select [(ngModel)]="filterCategory" class="form-control" (change)="onFilterChange()">
+          <option value="">All</option>
+          <option *ngFor="let c of categories" [value]="c.categoryCode">{{ c.categoryCode }}</option>
+        </select>
+      </div>
+      <div class="form-group filter-select">
+        <label>Scope</label>
+        <select [(ngModel)]="filterScope" class="form-control" (change)="onFilterChange()">
+          <option value="">All</option>
+          <option *ngFor="let s of scopes" [value]="s">{{ s }}</option>
+        </select>
+      </div>
+      <div class="form-group filter-select">
+        <label>Status</label>
+        <select [(ngModel)]="filterStatus" class="form-control" (change)="onFilterChange()">
+          <option value="">All</option>
+          <option value="ACTIVE">Active</option>
+          <option value="INACTIVE">Inactive</option>
+        </select>
+      </div>
+    </div>
+  </div>
+
+  <!-- Loading -->
+  <div *ngIf="loading" class="loading-state"><span class="spinner"></span> Loading skills…</div>
+
+  <!-- Table -->
+  <div *ngIf="!loading && pagedSkills" class="card">
+    <div class="table-wrapper">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th class="sortable" (click)="onSort('skillCode')">Code {{ sortIcon('skillCode') }}</th>
+            <th class="sortable" (click)="onSort('skillName')">Name {{ sortIcon('skillName') }}</th>
+            <th>Category</th>
+            <th>Scope</th>
+            <th>Type</th>
+            <th class="text-center">Status</th>
+            <th class="text-center">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let s of pagedSkills.content">
+            <td><span class="app-code">{{ s.skillCode }}</span></td>
+            <td class="font-medium">{{ s.skillName }}</td>
+            <td>{{ s.categoryName }}</td>
+            <td><span class="badge badge-type">{{ s.scopeCode }}</span></td>
+            <td>{{ s.skillTypeCode ?? '—' }}</td>
+            <td class="text-center">
+              <span [class]="s.active ? 'status-active' : 'status-inactive'">
+                {{ s.active ? 'Active' : 'Inactive' }}
+              </span>
+            </td>
+            <td class="text-center actions-cell">
+              <button class="btn btn-sm btn-outline" (click)="openEditForm(s)">Edit</button>
+              <button *ngIf="s.active" class="btn btn-sm btn-danger" (click)="requestDeactivate(s)">Deactivate</button>
+              <button *ngIf="!s.active" class="btn btn-sm btn-success" (click)="activateSkill(s)">Activate</button>
+            </td>
+          </tr>
+          <tr *ngIf="pagedSkills.content.length === 0">
+            <td colspan="7" class="empty-state">No skills found.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="pagination-bar" *ngIf="totalPages > 1">
+      <button class="btn btn-sm btn-outline" [disabled]="currentPage === 0" (click)="goToPage(currentPage - 1)">‹ Prev</button>
+      <ng-container *ngFor="let p of pageNumbers()">
+        <span *ngIf="p === -1" class="page-ellipsis">…</span>
+        <button *ngIf="p !== -1" class="btn btn-sm"
+                [class.btn-primary]="p === currentPage"
+                [class.btn-outline]="p !== currentPage"
+                (click)="goToPage(p)">{{ p + 1 }}</button>
+      </ng-container>
+      <button class="btn btn-sm btn-outline" [disabled]="!pagedSkills.hasNext" (click)="goToPage(currentPage + 1)">Next ›</button>
+    </div>
+    <div class="table-footer">Page {{ currentPage + 1 }} of {{ totalPages }} — {{ pagedSkills.totalElements }} skill(s)</div>
+  </div>
+
+  <!-- Import Skills Modal (reuses existing SkillImportComponent) -->
+  <div class="modal-overlay" *ngIf="showImportModal" (click)="closeImportModal()">
+    <div class="modal-box modal-box-lg" (click)="$event.stopPropagation()">
+      <div class="modal-header-row">
+        <h3 class="modal-title">Import Skills</h3>
+        <button class="close-btn" (click)="closeImportModal()" aria-label="Close">&times;</button>
+      </div>
+      <app-skill-import (importCompleted)="onImportCompleted($event)"></app-skill-import>
+    </div>
+  </div>
+</div>

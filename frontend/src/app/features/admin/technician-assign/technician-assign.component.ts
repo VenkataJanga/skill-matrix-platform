@@ -7,13 +7,19 @@ import {
   Application,
   ApplicationAssignment,
   ApplicationType,
+  AssignmentImportResult,
   AssignmentRequest,
+  AssignmentValidationResult,
+  BulkAssignmentEntry,
+  BulkAssignmentResult,
   BulkStatusResponse,
   Bundle,
   DuplicateCheckResponse,
   PagedResponse,
   UserSummary,
 } from '../../../core/models/application.model';
+
+const ROLE_ON_APP_CODES = ['PRIMARY', 'BACKUP', 'SME', 'TRAINEE'];
 
 @Component({
   selector: 'app-technician-assign',
@@ -58,6 +64,25 @@ export class TechnicianAssignComponent implements OnInit {
   showBulkConfirm = false;
   bulkResult: BulkStatusResponse | null = null;
   bulkReason = '';
+
+  // ---- Multi-Technician Assignment modal (M4 stabilization enhancement) ----
+  showMultiAssignModal = false;
+  multiAssignAppPublicId = '';
+  multiAssignRows: Array<{ userPublicId: string; allocationPercentage: number;
+      effectiveFrom: string; effectiveTo: string; roleOnAppCode: string }> = [];
+  multiAssignSubmitting = false;
+  multiAssignError: string | null = null;
+  multiAssignResult: BulkAssignmentResult | null = null;
+  roleOnAppCodes = ROLE_ON_APP_CODES;
+
+  // ---- Assignment Import/Export modal (M4 stabilization enhancement) ----
+  showImportModal = false;
+  selectedFile: File | null = null;
+  validationResult: AssignmentValidationResult | null = null;
+  importResult: AssignmentImportResult | null = null;
+  validating = false;
+  importing = false;
+  importError: string | null = null;
 
   constructor(private appService: ApplicationService) {}
 
@@ -355,6 +380,154 @@ export class TechnicianAssignComponent implements OnInit {
     this.duplicateCheck = null;
     this.formError = null;
     this.appService.getApplications().subscribe(a => this.applications = a);
+  }
+
+  // ----------------------------------------------------------------
+  // Multi-Technician Assignment (M4 stabilization enhancement — Problem
+  // Statement Part B). Assign several technicians to ONE application in a
+  // single batch request; each technician row processed independently.
+  // ----------------------------------------------------------------
+
+  openMultiAssignModal(): void {
+    this.multiAssignAppPublicId = '';
+    this.multiAssignRows = [this.emptyMultiAssignRow()];
+    this.multiAssignError = null;
+    this.multiAssignResult = null;
+    this.showMultiAssignModal = true;
+  }
+
+  closeMultiAssignModal(): void { this.showMultiAssignModal = false; }
+
+  addMultiAssignRow(): void { this.multiAssignRows.push(this.emptyMultiAssignRow()); }
+
+  removeMultiAssignRow(index: number): void {
+    if (this.multiAssignRows.length > 1) this.multiAssignRows.splice(index, 1);
+  }
+
+  private emptyMultiAssignRow() {
+    return {
+      userPublicId: '',
+      allocationPercentage: 100,
+      effectiveFrom: new Date().toISOString().split('T')[0],
+      effectiveTo: '',
+      roleOnAppCode: '',
+    };
+  }
+
+  get isMultiAssignValid(): boolean {
+    return !!this.multiAssignAppPublicId && this.multiAssignRows.length > 0 &&
+      this.multiAssignRows.every(r => r.userPublicId && r.allocationPercentage > 0 &&
+        r.allocationPercentage <= 100 && r.effectiveFrom);
+  }
+
+  submitMultiAssign(): void {
+    if (!this.isMultiAssignValid) return;
+    this.multiAssignSubmitting = true;
+    this.multiAssignError = null;
+
+    const assignments: BulkAssignmentEntry[] = this.multiAssignRows.map(r => ({
+      userPublicId: r.userPublicId,
+      allocationPercentage: r.allocationPercentage,
+      effectiveFrom: r.effectiveFrom,
+      effectiveTo: r.effectiveTo || null,
+      roleOnAppCode: r.roleOnAppCode || null,
+    }));
+
+    this.appService.createBulkAssignments({
+      applicationPublicId: this.multiAssignAppPublicId,
+      assignments,
+    }).subscribe({
+      next: (result) => {
+        this.multiAssignResult = result;
+        this.multiAssignSubmitting = false;
+        this.successMessage = `Multi-Technician Assignment: ${result.created} created, `
+          + `${result.updated} updated, ${result.skipped} skipped, ${result.failed} failed.`;
+        this.loadAssignments();
+      },
+      error: (err) => {
+        this.multiAssignError = err?.error?.message ?? 'Multi-Technician Assignment failed.';
+        this.multiAssignSubmitting = false;
+      },
+    });
+  }
+
+  // ----------------------------------------------------------------
+  // Assignment Excel Import/Export (M4 stabilization enhancement — Problem
+  // Statement Part C)
+  // ----------------------------------------------------------------
+
+  openImportModal(): void {
+    this.showImportModal = true;
+    this.selectedFile = null;
+    this.validationResult = null;
+    this.importResult = null;
+    this.importError = null;
+  }
+
+  closeImportModal(): void { this.showImportModal = false; }
+
+  downloadAssignmentTemplate(): void { this.appService.downloadAssignmentTemplate(); }
+
+  exportAssignmentsExcel(): void {
+    this.appService.exportAssignmentsExcel({
+      technicianPublicId: this.filterTechPublicId || undefined,
+      typeCode: this.filterTypeCode || undefined,
+      bundleCode: this.filterBundleCode || undefined,
+      applicationPublicId: this.filterAppPublicId || undefined,
+      status: this.filterStatus || undefined,
+    });
+  }
+
+  onImportFileSelected(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    this.selectedFile = input.files?.[0] ?? null;
+    this.validationResult = null;
+    this.importResult = null;
+    this.importError = null;
+  }
+
+  onValidateImport(): void {
+    if (!this.selectedFile) return;
+    this.validating = true;
+    this.importError = null;
+    this.importResult = null;
+    this.appService.validateAssignmentImport(this.selectedFile).subscribe({
+      next: (result) => { this.validationResult = result; this.validating = false; },
+      error: (err) => {
+        this.importError = err?.error?.message ?? 'Validation failed. Please try again.';
+        this.validating = false;
+      },
+    });
+  }
+
+  get canConfirmAssignmentImport(): boolean {
+    return !!this.validationResult
+      && (this.validationResult.insertRows + this.validationResult.updateRows) > 0
+      && !this.importing;
+  }
+
+  onConfirmImportAssignments(): void {
+    if (!this.selectedFile || !this.canConfirmAssignmentImport) return;
+    this.importing = true;
+    this.importError = null;
+    this.appService.confirmAssignmentImport(this.selectedFile).subscribe({
+      next: (result) => {
+        this.importResult = result;
+        this.importing = false;
+        if (result.success) {
+          this.successMessage = result.message;
+          this.selectedFile = null;
+          this.validationResult = null;
+          this.loadAssignments();
+        } else {
+          this.importError = result.message;
+        }
+      },
+      error: (err) => {
+        this.importError = err?.error?.message ?? 'Import failed. Please try again.';
+        this.importing = false;
+      },
+    });
   }
 
   // ----------------------------------------------------------------

@@ -1,0 +1,59 @@
+<div class="my-assessments-page">
+  <header class="page-header">
+    <h1>My Assessments</h1>
+  </header>
+
+  <div class="alert alert-error" *ngIf="error">{{ error }}</div>
+
+  <div class="summary-cards">
+    <div class="summary-card">
+      <div class="summary-count">{{ openCount }}</div>
+      <div class="summary-label">Open</div>
+    </div>
+    <div class="summary-card">
+      <div class="summary-count">{{ draftCount }}</div>
+      <div class="summary-label">Draft</div>
+    </div>
+    <div class="summary-card">
+      <div class="summary-count">{{ submittedCount }}</div>
+      <div class="summary-label">Submitted</div>
+    </div>
+  </div>
+
+  <div class="loading" *ngIf="loading">Loading...</div>
+
+  <div class="table-wrapper" *ngIf="!loading">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Cycle</th>
+          <th>Application</th>
+          <th>Start Date</th>
+          <th>End Date</th>
+          <th>Status</th>
+          <th>Progress</th>
+          <th>Action</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let a of assessments">
+          <td>{{ a.cycleName }}</td>
+          <td>{{ a.applicationName }}</td>
+          <td>{{ a.cycleStartDate }}</td>
+          <td>{{ a.cycleEndDate }}</td>
+          <td>
+            <span class="badge" [ngClass]="a.assessmentStatus.toLowerCase()">{{ a.assessmentStatus }}</span>
+            <span class="badge badge-window" *ngIf="windowLabel(a)">{{ windowLabel(a) }}</span>
+          </td>
+          <td>{{ progressLabel(a) }}</td>
+          <td>
+            <button class="btn btn-primary btn-sm" [disabled]="isActionDisabled(a)" (click)="onAction(a)">{{ actionLabel(a) }}</button>
+          </td>
+        </tr>
+        <tr *ngIf="assessments.length === 0">
+          <td colspan="7" class="empty-row">No assessments available for your assigned applications yet.</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>

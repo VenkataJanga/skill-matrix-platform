@@ -19,12 +19,12 @@ import { UserMe } from '../../../core/models/auth.model';
       </div>
 
       <div class="info-grid">
-        <div class="info-card" style="border-top-color: #7b1fa2">
+        <a routerLink="/technician/my-assessments" class="info-card info-card-link" style="border-top-color: #7b1fa2">
           <div class="info-card-icon">📝</div>
           <h3>My Self-Assessment</h3>
           <p>Submit your skill self-assessments for open assessment cycles.</p>
-          <span class="badge badge-coming-soon">Coming Soon</span>
-        </div>
+          <span class="badge badge-available">Available</span>
+        </a>
         <div class="info-card" style="border-top-color: #7b1fa2">
           <div class="info-card-icon">🎯</div>
           <h3>My Skill Gaps</h3>

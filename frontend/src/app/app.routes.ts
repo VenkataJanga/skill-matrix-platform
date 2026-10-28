@@ -10,6 +10,20 @@ export const routes: Routes = [
       import('./features/auth/login/login.component').then((m) => m.LoginComponent),
   },
   {
+    path: 'forgot-password',
+    loadComponent: () =>
+      import('./features/auth/forgot-password/forgot-password.component').then(
+        (m) => m.ForgotPasswordComponent
+      ),
+  },
+  {
+    path: 'reset-password',
+    loadComponent: () =>
+      import('./features/auth/reset-password/reset-password.component').then(
+        (m) => m.ResetPasswordComponent
+      ),
+  },
+  {
     path: 'unauthorized',
     loadComponent: () =>
       import('./features/unauthorized/unauthorized.component').then(
@@ -66,6 +80,60 @@ export const routes: Routes = [
             (m) => m.TechnicianAssignComponent
           ),
       },
+      {
+        path: 'admin/skills',
+        canActivate: [authGuard, roleGuard],
+        data: { roles: ['ADMIN'] },
+        loadComponent: () =>
+          import('./features/admin/skill-management/skill-management.component').then(
+            (m) => m.SkillManagementComponent
+          ),
+      },
+      {
+        path: 'admin/applications',
+        canActivate: [authGuard, roleGuard],
+        data: { roles: ['ADMIN'] },
+        loadComponent: () =>
+          import('./features/admin/application-master/application-master.component').then(
+            (m) => m.ApplicationMasterComponent
+          ),
+      },
+      {
+        path: 'admin/skill-import',
+        canActivate: [authGuard, roleGuard],
+        data: { roles: ['ADMIN'] },
+        loadComponent: () =>
+          import('./features/admin/skill-import/skill-import.component').then(
+            (m) => m.SkillImportComponent
+          ),
+      },
+      {
+        path: 'admin/skill-requirements',
+        canActivate: [authGuard, roleGuard],
+        data: { roles: ['ADMIN'] },
+        loadComponent: () =>
+          import('./features/admin/skill-requirements/skill-requirements.component').then(
+            (m) => m.SkillRequirementsComponent
+          ),
+      },
+      {
+        path: 'admin/import-history',
+        canActivate: [authGuard, roleGuard],
+        data: { roles: ['ADMIN'] },
+        loadComponent: () =>
+          import('./features/admin/import-history/import-history.component').then(
+            (m) => m.ImportHistoryComponent
+          ),
+      },
+      {
+        path: 'admin/assessment-cycles',
+        canActivate: [authGuard, roleGuard],
+        data: { roles: ['ADMIN'] },
+        loadComponent: () =>
+          import('./features/admin/assessment-cycles/assessment-cycles.component').then(
+            (m) => m.AssessmentCyclesComponent
+          ),
+      },
 
       // -------------------------------------------------------
       // LEAD MANAGER routes
@@ -108,6 +176,24 @@ export const routes: Routes = [
         loadComponent: () =>
           import('./features/technician/my-applications/my-applications.component').then(
             (m) => m.MyApplicationsComponent
+          ),
+      },
+      {
+        path: 'technician/my-assessments',
+        canActivate: [authGuard, roleGuard],
+        data: { roles: ['TECHNICIAN'] },
+        loadComponent: () =>
+          import('./features/technician/my-assessments/my-assessments.component').then(
+            (m) => m.MyAssessmentsComponent
+          ),
+      },
+      {
+        path: 'technician/self-assessment/:publicId',
+        canActivate: [authGuard, roleGuard],
+        data: { roles: ['TECHNICIAN'] },
+        loadComponent: () =>
+          import('./features/technician/self-assessment/self-assessment.component').then(
+            (m) => m.SelfAssessmentComponent
           ),
       },
     ],

@@ -1,0 +1,95 @@
+<div class="self-assessment-page" *ngIf="assessment">
+  <header class="assessment-header">
+    <button class="btn btn-link" (click)="backToList()">&larr; Back to My Assessments</button>
+    <h1>{{ assessment.cycleName }}</h1>
+    <div class="meta-row">
+      <span><strong>Application:</strong> {{ assessment.applicationName }}</span>
+      <span><strong>Period:</strong> {{ assessment.cycleStartDate }} – {{ assessment.cycleEndDate }}</span>
+      <span class="badge" [ngClass]="assessment.statusCode?.toLowerCase()">{{ assessment.statusLabel ?? assessment.statusCode }}</span>
+    </div>
+  </header>
+
+  <div class="alert alert-success" *ngIf="successMessage">
+    {{ successMessage }}
+    <button class="close-btn" (click)="dismissSuccess()">&times;</button>
+  </div>
+  <div class="alert alert-error" *ngIf="error">
+    {{ error }}
+    <button class="close-btn" (click)="dismissError()">&times;</button>
+  </div>
+
+  <div class="rating-scale-info">
+    <strong>Rating Scale:</strong>
+    1 – Awareness &nbsp;|&nbsp; 2 – Working Knowledge &nbsp;|&nbsp; 3 – Independent Contributor &nbsp;|&nbsp;
+    4 – Advanced Practitioner &nbsp;|&nbsp; 5 – SME / Expert
+  </div>
+
+  <div class="progress-indicator">
+    {{ mandatoryCompleted }} of {{ mandatoryTotal }} mandatory skills completed
+  </div>
+
+  <div class="skill-group" *ngFor="let grp of groupedItems()">
+    <h2>{{ grp.group }}</h2>
+    <table class="data-table skill-table">
+      <thead>
+        <tr>
+          <th>Skill</th>
+          <th>Mandatory</th>
+          <th>Self Rating</th>
+          <th>Comment</th>
+          <th>Evidence</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let item of grp.items">
+          <td>{{ item.skillName }}</td>
+          <td><span *ngIf="item.mandatory" class="mandatory-flag">Required</span><span *ngIf="!item.mandatory">Optional</span></td>
+          <td>
+            <select [(ngModel)]="item.selfRating" [disabled]="isReadOnly">
+              <option [ngValue]="null">— Not Rated —</option>
+              <option *ngFor="let r of ratings" [ngValue]="r">{{ r }} – {{ ratingLabels[r] }}</option>
+            </select>
+          </td>
+          <td>
+            <input type="text" [(ngModel)]="item.comment" [disabled]="isReadOnly" maxlength="500" placeholder="Optional comment" />
+          </td>
+          <td>
+            <input type="text" [(ngModel)]="item.evidence" [disabled]="isReadOnly" maxlength="1000" placeholder="e.g. project reference" />
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="form-actions" *ngIf="!isReadOnly">
+    <button class="btn btn-secondary" [disabled]="saving" (click)="saveDraft()">
+      {{ saving ? 'Saving...' : 'Save Draft' }}
+    </button>
+    <button class="btn btn-primary" [disabled]="!canSubmit || submitting" (click)="requestSubmit()">
+      {{ submitting ? 'Submitting...' : 'Submit Assessment' }}
+    </button>
+  </div>
+
+  <div class="readonly-note" *ngIf="isReadOnly && assessment.statusCode === 'SUBMITTED'">
+    This assessment has been submitted and is now read-only. Submitted on {{ assessment.submittedAt }}.
+  </div>
+  <div class="readonly-note readonly-note-expired" *ngIf="isReadOnly && assessment.statusCode !== 'SUBMITTED' && isCycleExpired">
+    Assessment cycle has ended. This draft can no longer be edited, saved or submitted.
+  </div>
+
+  <!-- Submit confirmation -->
+  <div class="modal-overlay" *ngIf="showSubmitConfirm" (click)="cancelSubmit()">
+    <div class="modal-box modal-box-sm" (click)="$event.stopPropagation()">
+      <h3 class="modal-title">Submit Self-Assessment</h3>
+      <p>You are about to submit your assessment for <strong>{{ assessment.applicationName }}</strong>.</p>
+      <p>After submission, you will not be able to edit your ratings unless the assessment is returned during a later review process.</p>
+      <div class="modal-actions">
+        <button class="btn btn-secondary" (click)="cancelSubmit()">Cancel</button>
+        <button class="btn btn-primary" (click)="confirmSubmit()">Submit Assessment</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="loading" *ngIf="loading">Loading...</div>
+<div class="alert alert-error" *ngIf="error && !assessment">{{ error }}</div>

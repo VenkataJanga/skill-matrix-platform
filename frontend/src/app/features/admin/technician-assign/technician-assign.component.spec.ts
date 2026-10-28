@@ -20,6 +20,7 @@ describe('TechnicianAssignComponent', () => {
     applicationCode: 'ATLAS', applicationName: 'ATLAS-deZentral',
     typeCode: 'WEB', bundleCode: 'B06', allocationPercentage: 100,
     effectiveFrom: '2026-01-01', effectiveTo: null, active: true,
+    roleOnAppCode: null, primary: false,
   };
 
   const emptyPaged: PagedResponse<ApplicationAssignment> = {
@@ -32,6 +33,8 @@ describe('TechnicianAssignComponent', () => {
       'getApplicationTypes', 'getBundles', 'getTechnicians', 'getApplications',
       'getAssignmentsPaged', 'checkDuplicate', 'createAssignment',
       'updateAssignmentStatus', 'bulkUpdateAssignmentStatus',
+      'createBulkAssignments', 'downloadAssignmentTemplate', 'exportAssignmentsExcel',
+      'validateAssignmentImport', 'confirmAssignmentImport',
     ]);
     svc.getApplicationTypes.and.returnValue(of([]));
     svc.getBundles.and.returnValue(of([]));

@@ -1,0 +1,30 @@
+.dropdown-list {
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  max-height: 200px;
+  overflow-y: auto;
+  margin-top: 4px;
+  background: #fff;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+}
+
+.dropdown-item {
+  padding: 8px 12px;
+  cursor: pointer;
+
+  &:hover {
+    background: #f0f4ff;
+  }
+}
+
+.filter-row {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.badge-insert { background: #e3fcef; color: #087f5b; }
+.badge-update { background: #fff3bf; color: #997404; }
+.badge-skip   { background: #e9ecef; color: #495057; }
+.badge-error  { background: #ffe3e3; color: #c92a2a; }

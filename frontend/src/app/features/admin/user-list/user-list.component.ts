@@ -2,7 +2,10 @@ import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ApplicationService } from '../../../core/services/application.service';
+import { UserImportComponent } from '../user-import/user-import.component';
 import {
+  BulkDeleteRequest,
+  BulkDeleteResponse,
   CreateUserRequest,
   PagedResponse,
   UpdateUserRequest,
@@ -15,7 +18,7 @@ const ROLES = ['ADMIN', 'LEAD_MANAGER', 'TECHNICIAN'];
 @Component({
   selector: 'app-user-list',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, UserImportComponent],
   templateUrl: './user-list.component.html',
   styleUrl: './user-list.component.scss',
 })
@@ -46,8 +49,32 @@ export class UserListComponent implements OnInit {
 
   roles = ROLES;
 
+  // ---- Import panel state ----
+  showImportPanel = false;
+
   // ---- Confirm deactivate ----
   confirmDeactivateUser: UserSummary | null = null;
+
+  // ---- Checkbox selection ----
+  selectedPublicIds: Set<string> = new Set();
+
+  // ---- Delete confirm modal ----
+  showDeleteConfirmModal = false;
+  /** When set, we're deleting a single user; otherwise uses selectedPublicIds. */
+  deleteSingleTarget: UserSummary | null = null;
+  deleteReason = '';
+  isDeleting = false;
+
+  // ---- Delete summary modal ----
+  showDeleteSummary = false;
+  deleteSummary: BulkDeleteResponse | null = null;
+
+  // ---- Admin password reset ----
+  confirmResetPasswordUser: UserSummary | null = null;
+  isResettingPassword = false;
+  showResetResultModal = false;
+  resetResultDevLink: string | null = null;
+  resetResultUsername = '';
 
   constructor(private appService: ApplicationService) {}
 
@@ -74,6 +101,11 @@ export class UserListComponent implements OnInit {
       next: (data) => {
         this.pagedUsers = data;
         this.loading = false;
+        // Clear any selections that are no longer visible
+        const visibleIds = new Set(data.content.map(u => u.publicId));
+        this.selectedPublicIds = new Set(
+          [...this.selectedPublicIds].filter(id => visibleIds.has(id))
+        );
       },
       error: () => {
         this.error = 'Failed to load users.';
@@ -279,6 +311,162 @@ export class UserListComponent implements OnInit {
   }
 
   // ----------------------------------------------------------------
+  // Checkbox selection
+  // ----------------------------------------------------------------
+
+  get allSelected(): boolean {
+    const users = this.pagedUsers?.content ?? [];
+    return users.length > 0 && users.every(u => this.selectedPublicIds.has(u.publicId));
+  }
+
+  get someSelected(): boolean {
+    return this.selectedPublicIds.size > 0;
+  }
+
+  toggleSelectAll(): void {
+    const users = this.pagedUsers?.content ?? [];
+    if (this.allSelected) {
+      users.forEach(u => this.selectedPublicIds.delete(u.publicId));
+    } else {
+      users.forEach(u => this.selectedPublicIds.add(u.publicId));
+    }
+  }
+
+  toggleSelect(publicId: string): void {
+    if (this.selectedPublicIds.has(publicId)) {
+      this.selectedPublicIds.delete(publicId);
+    } else {
+      this.selectedPublicIds.add(publicId);
+    }
+  }
+
+  isSelected(publicId: string): boolean {
+    return this.selectedPublicIds.has(publicId);
+  }
+
+  clearSelection(): void {
+    this.selectedPublicIds.clear();
+  }
+
+  // ----------------------------------------------------------------
+  // Delete — open / cancel modal
+  // ----------------------------------------------------------------
+
+  requestDeleteSingle(user: UserSummary): void {
+    this.deleteSingleTarget = user;
+    this.deleteReason = '';
+    this.showDeleteConfirmModal = true;
+  }
+
+  requestDeleteSelected(): void {
+    this.deleteSingleTarget = null;
+    this.deleteReason = '';
+    this.showDeleteConfirmModal = true;
+  }
+
+  cancelDelete(): void {
+    this.showDeleteConfirmModal = false;
+    this.deleteSingleTarget = null;
+    this.deleteReason = '';
+  }
+
+  // ----------------------------------------------------------------
+  // Delete — execute
+  // ----------------------------------------------------------------
+
+  confirmDelete(): void {
+    this.isDeleting = true;
+
+    if (this.deleteSingleTarget) {
+      const target = this.deleteSingleTarget;
+      this.appService.deleteUser(target.publicId, this.deleteReason || undefined).subscribe({
+        next: (result) => {
+          this.showDeleteConfirmModal = false;
+          this.isDeleting = false;
+          this.deleteSingleTarget = null;
+          const summary: BulkDeleteResponse = {
+            requestedCount: 1,
+            deletedCount: result.status === 'DELETED' ? 1 : 0,
+            blockedCount: result.status === 'BLOCKED' ? 1 : 0,
+            failedCount: result.status === 'FAILED' ? 1 : 0,
+            results: result.status !== 'DELETED' ? [result] : [],
+          };
+          this.deleteSummary = summary;
+          this.showDeleteSummary = true;
+          this.selectedPublicIds.delete(target.publicId);
+          this.load();
+        },
+        error: (err) => {
+          this.isDeleting = false;
+          this.showDeleteConfirmModal = false;
+          this.error = err?.error?.message ?? 'Failed to delete user.';
+        },
+      });
+    } else {
+      const req: BulkDeleteRequest = {
+        userPublicIds: [...this.selectedPublicIds],
+        reason: this.deleteReason || undefined,
+      };
+      this.appService.bulkDeleteUsers(req).subscribe({
+        next: (summary) => {
+          this.showDeleteConfirmModal = false;
+          this.isDeleting = false;
+          this.deleteSummary = summary;
+          this.showDeleteSummary = true;
+          this.selectedPublicIds.clear();
+          this.load();
+        },
+        error: (err) => {
+          this.isDeleting = false;
+          this.showDeleteConfirmModal = false;
+          this.error = err?.error?.message ?? 'Failed to delete users.';
+        },
+      });
+    }
+  }
+
+  closeSummary(): void {
+    this.showDeleteSummary = false;
+    this.deleteSummary = null;
+  }
+
+  get deleteTargetCount(): number {
+    return this.deleteSingleTarget ? 1 : this.selectedPublicIds.size;
+  }
+
+  get deleteModalTitle(): string {
+    return this.deleteSingleTarget
+      ? `Delete User "${this.deleteSingleTarget.username}"?`
+      : `Delete ${this.selectedPublicIds.size} Selected Users?`;
+  }
+
+  // ----------------------------------------------------------------
+  // Download / Export / Import
+  // ----------------------------------------------------------------
+
+  downloadTemplate(): void {
+    this.appService.downloadUserTemplate();
+  }
+
+  exportUsers(): void {
+    this.appService.exportUsers({
+      search: this.searchTerm || undefined,
+      roleCode: this.roleFilter || undefined,
+      status: this.statusFilter || undefined,
+    });
+  }
+
+  toggleImportPanel(): void {
+    this.showImportPanel = !this.showImportPanel;
+  }
+
+  onImportCompleted(): void {
+    this.showImportPanel = false;
+    this.successMessage = 'Import completed successfully. User list refreshed.';
+    this.load();
+  }
+
+  // ----------------------------------------------------------------
   // Reset / Clear Filters
   // ----------------------------------------------------------------
 
@@ -313,6 +501,44 @@ export class UserListComponent implements OnInit {
       case 'TECHNICIAN':   return 'badge-tech';
       default:             return 'badge-default';
     }
+  }
+
+  // ----------------------------------------------------------------
+  // Admin-assisted password reset
+  // ----------------------------------------------------------------
+
+  requestResetPassword(user: UserSummary): void {
+    this.confirmResetPasswordUser = user;
+  }
+
+  cancelResetPassword(): void {
+    this.confirmResetPasswordUser = null;
+  }
+
+  confirmResetPassword(): void {
+    if (!this.confirmResetPasswordUser) return;
+    const user = this.confirmResetPasswordUser;
+    this.isResettingPassword = true;
+    this.appService.adminResetPassword(user.publicId).subscribe({
+      next: (result) => {
+        this.isResettingPassword = false;
+        this.confirmResetPasswordUser = null;
+        this.resetResultUsername = result.username;
+        this.resetResultDevLink = result.devResetLink ?? null;
+        this.showResetResultModal = true;
+      },
+      error: (err) => {
+        this.isResettingPassword = false;
+        this.confirmResetPasswordUser = null;
+        this.error = err?.error?.message ?? 'Failed to initiate password reset.';
+      },
+    });
+  }
+
+  closeResetResultModal(): void {
+    this.showResetResultModal = false;
+    this.resetResultDevLink = null;
+    this.resetResultUsername = '';
   }
 
   dismissSuccess(): void { this.successMessage = null; }

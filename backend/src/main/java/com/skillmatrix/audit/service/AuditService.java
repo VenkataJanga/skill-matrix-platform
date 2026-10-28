@@ -31,6 +31,16 @@ public class AuditService {
     public static final String PASSWORD_CHANGE   = "PASSWORD_CHANGE";
     public static final String TOKEN_REFRESH     = "TOKEN_REFRESH";
 
+    public static final String USER_DELETE       = "USER_DELETE";
+    public static final String USER_BULK_DELETE  = "USER_BULK_DELETE";
+
+    // Password reset (development/pilot Forgot Password + Admin-assisted fallback)
+    public static final String PASSWORD_RESET_REQUESTED              = "PASSWORD_RESET_REQUESTED";
+    public static final String PASSWORD_RESET_COMPLETED              = "PASSWORD_RESET_COMPLETED";
+    public static final String ADMIN_PASSWORD_RESET_INITIATED        = "ADMIN_PASSWORD_RESET_INITIATED";
+    public static final String FORCED_PASSWORD_CHANGE_COMPLETED      = "FORCED_PASSWORD_CHANGE_COMPLETED";
+    public static final String SESSION_INVALIDATED_AFTER_PASSWORD_RESET = "SESSION_INVALIDATED_AFTER_PASSWORD_RESET";
+
     public static final String ENTITY_AUTH       = "AUTH";
     public static final String ENTITY_USER       = "USER";
 

@@ -1,0 +1,234 @@
+<div class="user-import-panel">
+
+  <!-- ============================================================
+       Alerts
+  ============================================================ -->
+  <div *ngIf="successMessage" class="alert alert-success alert-dismissible">
+    <span>{{ successMessage }}</span>
+    <button class="btn-close-alert" (click)="dismissSuccess()">✕</button>
+  </div>
+  <div *ngIf="error" class="alert alert-danger alert-dismissible">
+    <span>{{ error }}</span>
+    <button class="btn-close-alert" (click)="dismissError()">✕</button>
+  </div>
+
+  <!-- ============================================================
+       File picker + action buttons
+  ============================================================ -->
+  <div class="import-file-row">
+    <label class="file-label" for="userImportFile">
+      <span class="file-icon">📂</span>
+      <span *ngIf="!selectedFile" class="file-placeholder">Choose Excel file (.xlsx)</span>
+      <span *ngIf="selectedFile"  class="file-name">{{ selectedFile.name }}</span>
+    </label>
+    <input
+      id="userImportFile"
+      type="file"
+      accept=".xlsx,.xls"
+      (change)="onFileSelected($event)"
+      class="file-input-hidden"
+    />
+
+    <div class="import-actions">
+      <!-- Validate -->
+      <button
+        class="btn btn-secondary btn-sm"
+        (click)="onValidate()"
+        [disabled]="!selectedFile || validating || importing"
+      >
+        <span *ngIf="!validating">🔍 Validate Only</span>
+        <span *ngIf="validating">Validating…</span>
+      </button>
+
+      <!-- STRICT Confirm Import (only when zero errors) -->
+      <button
+        *ngIf="!validationResult || validationResult.errorRows === 0"
+        class="btn btn-primary btn-sm"
+        (click)="onConfirmImport()"
+        [disabled]="!canConfirmStrict"
+        [title]="!validationResult ? 'Validate first' : ''"
+      >
+        <span *ngIf="!importing">✅ Confirm Import</span>
+        <span *ngIf="importing">Importing…</span>
+      </button>
+
+      <!-- Import Valid Rows Only (shown when errors exist) -->
+      <button
+        *ngIf="validationResult && validationResult.errorRows > 0"
+        class="btn btn-warning btn-sm"
+        (click)="onImportValidOnly()"
+        [disabled]="!canImportPartial || importing"
+        title="Import INSERT and UPDATE rows only — ERROR rows will be rejected"
+      >
+        <span *ngIf="!importing">⚠️ Import Valid Rows Only</span>
+        <span *ngIf="importing">Importing…</span>
+      </button>
+
+      <!-- Clear -->
+      <button
+        *ngIf="selectedFile"
+        class="btn btn-outline btn-sm"
+        (click)="clearFile()"
+        [disabled]="validating || importing"
+      >
+        ✕ Clear
+      </button>
+    </div>
+  </div>
+
+  <!-- ============================================================
+       Validation summary
+  ============================================================ -->
+  <div *ngIf="validationResult" class="validation-summary">
+    <div class="summary-counts">
+      <span class="count-badge total">Total: {{ validationResult.totalRows }}</span>
+      <span class="count-badge insert" *ngIf="validationResult.insertRows > 0">
+        INSERT: {{ validationResult.insertRows }}
+      </span>
+      <span class="count-badge update" *ngIf="validationResult.updateRows > 0">
+        UPDATE: {{ validationResult.updateRows }}
+      </span>
+      <span class="count-badge skip" *ngIf="validationResult.skipRows > 0">
+        SKIP: {{ validationResult.skipRows }}
+      </span>
+      <span class="count-badge error" *ngIf="validationResult.errorRows > 0">
+        ERROR: {{ validationResult.errorRows }}
+      </span>
+
+      <!-- All-clear badge -->
+      <span class="count-badge valid-badge" *ngIf="validationResult.valid">
+        ✓ Ready to Import
+      </span>
+
+      <!-- Errors present — but valid rows available -->
+      <span class="count-badge warn-badge"
+            *ngIf="!validationResult.valid && canImportPartial">
+        ⚠ {{ modalValidRowCount }} valid row{{ modalValidRowCount !== 1 ? 's' : '' }} available — {{ validationResult.errorRows }} will be rejected
+      </span>
+
+      <!-- Errors present — no valid rows at all -->
+      <span class="count-badge invalid-badge"
+            *ngIf="!validationResult.valid && !canImportPartial">
+        ✗ No valid rows — fix errors before import
+      </span>
+    </div>
+
+    <!-- Download Error Report button (pre-import) -->
+    <div *ngIf="validationResult.errorRows > 0" class="error-report-row">
+      <button class="btn btn-outline btn-sm" (click)="downloadErrorReport()">
+        ⬇ Download Error Report
+      </button>
+      <span class="error-report-hint">
+        {{ validationResult.errorRows }} row{{ validationResult.errorRows !== 1 ? 's' : '' }} with errors
+      </span>
+    </div>
+
+    <!-- Preview table -->
+    <div class="preview-table-wrapper" *ngIf="validationResult.rows.length > 0">
+      <table class="preview-table">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Username</th>
+            <th>Full Name</th>
+            <th>Email</th>
+            <th>Role</th>
+            <th>Action</th>
+            <th>Reason / Errors</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let row of validationResult.rows"
+              [class]="'row-' + row.action.toLowerCase()">
+            <td>{{ row.rowNumber }}</td>
+            <td>{{ row.username ?? '—' }}</td>
+            <td>{{ row.fullName ?? '—' }}</td>
+            <td>{{ row.email ?? '—' }}</td>
+            <td>{{ row.roleCode ?? '—' }}</td>
+            <td>
+              <span [class]="'action-badge ' + actionBadgeClass(row.action)">
+                {{ row.action }}
+              </span>
+            </td>
+            <td class="reason-cell">
+              <span *ngIf="row.action !== 'ERROR'">{{ row.reason }}</span>
+              <ul *ngIf="row.action === 'ERROR'" class="error-list">
+                <li *ngFor="let e of row.errors">{{ e }}</li>
+              </ul>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ============================================================
+       Import result (after confirm)
+  ============================================================ -->
+  <div *ngIf="importResult && importResult.success" class="import-result">
+    <div class="result-header" [class.partial]="importResult.partialSuccess">
+      <span *ngIf="importResult.partialSuccess">⚠ Import completed with partial success.</span>
+      <span *ngIf="!importResult.partialSuccess">✅ Import completed successfully.</span>
+    </div>
+    <div class="result-counts">
+      <span class="count-badge insert">Inserted: {{ importResult.insertedRows }}</span>
+      <span class="count-badge update" *ngIf="importResult.updatedRows > 0">
+        Updated: {{ importResult.updatedRows }}
+      </span>
+      <span class="count-badge skip">Skipped: {{ importResult.skippedRows }}</span>
+      <span class="count-badge error" *ngIf="importResult.errorRows > 0">
+        Failed: {{ importResult.errorRows }}
+      </span>
+    </div>
+  </div>
+
+</div>
+
+<!-- ============================================================
+     Confirmation modal (inline overlay)
+============================================================ -->
+<div *ngIf="showConfirmModal" class="modal-overlay" (click)="cancelModal()">
+  <div class="modal-box" (click)="$event.stopPropagation()">
+    <h3 class="modal-title">
+      <span *ngIf="pendingImportMode === 'PARTIAL'">⚠️ Import Valid Rows Only</span>
+      <span *ngIf="pendingImportMode === 'STRICT'">✅ Confirm Import</span>
+    </h3>
+
+    <div class="modal-body" *ngIf="validationResult">
+      <p class="modal-summary-line">
+        <strong>{{ validationResult.totalRows }}</strong> row{{ validationResult.totalRows !== 1 ? 's' : '' }} were validated.
+      </p>
+      <ul class="modal-breakdown">
+        <li *ngIf="validationResult.insertRows > 0">
+          <span class="count-badge insert">{{ validationResult.insertRows }}</span>
+          row{{ validationResult.insertRows !== 1 ? 's' : '' }} will be <strong>inserted</strong>.
+        </li>
+        <li *ngIf="validationResult.updateRows > 0">
+          <span class="count-badge update">{{ validationResult.updateRows }}</span>
+          row{{ validationResult.updateRows !== 1 ? 's' : '' }} will be <strong>updated</strong>.
+        </li>
+        <li *ngIf="validationResult.skipRows > 0">
+          <span class="count-badge skip">{{ validationResult.skipRows }}</span>
+          row{{ validationResult.skipRows !== 1 ? 's' : '' }} will be <strong>skipped</strong> (already exist unchanged).
+        </li>
+        <li *ngIf="validationResult.errorRows > 0 && pendingImportMode === 'PARTIAL'" class="modal-error-line">
+          <span class="count-badge error">{{ validationResult.errorRows }}</span>
+          row{{ validationResult.errorRows !== 1 ? 's' : '' }} contain errors and will <strong>NOT</strong> be imported.
+        </li>
+      </ul>
+      <p class="modal-question">Do you want to continue?</p>
+    </div>
+
+    <div class="modal-actions">
+      <button class="btn btn-outline btn-sm" (click)="cancelModal()">Cancel</button>
+      <button
+        class="btn btn-sm"
+        [class.btn-warning]="pendingImportMode === 'PARTIAL'"
+        [class.btn-primary]="pendingImportMode === 'STRICT'"
+        (click)="confirmModal()"
+      >
+        {{ modalConfirmLabel }}
+      </button>
+    </div>
+  </div>
+</div>

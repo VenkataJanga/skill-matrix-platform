@@ -1,0 +1,390 @@
+.app-master-page {
+  // ------------------------------------------------------------
+  // Page header
+  // ------------------------------------------------------------
+  .page-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    flex-wrap: wrap;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+
+    .header-text {
+      h1.page-title {
+        font-size: 1.75rem;
+        font-weight: 700;
+        color: var(--color-primary-dark);
+        margin: 0 0 0.3rem;
+      }
+
+      .page-subtitle {
+        font-size: 0.875rem;
+        font-weight: 400;
+        color: var(--color-text-secondary);
+        margin: 0;
+      }
+    }
+
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      flex-wrap: wrap;
+    }
+  }
+
+  // ------------------------------------------------------------
+  // Buttons — modern variants (scoped to this page; additive only)
+  // ------------------------------------------------------------
+  .btn {
+    height: 42px;
+    border-radius: var(--radius-md);
+    font-size: 0.875rem;
+    font-weight: 600;
+    transition: background var(--transition-fast), border-color var(--transition-fast),
+                color var(--transition-fast), box-shadow var(--transition-fast);
+  }
+
+  .btn-icon-glyph {
+    font-size: 0.95em;
+    line-height: 1;
+  }
+
+  .btn-tertiary {
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    color: var(--color-text-secondary);
+
+    &:hover:not(:disabled) {
+      background: var(--color-surface-subtle);
+      border-color: var(--color-border-strong);
+    }
+  }
+
+  .btn-ghost {
+    background: transparent;
+    border: none;
+    color: var(--color-text-secondary);
+    padding: 0.5rem 0.75rem;
+
+    &:hover:not(:disabled) {
+      background: var(--color-surface-subtle);
+      color: var(--color-text-primary);
+    }
+  }
+
+  .btn-warning {
+    background: var(--color-warning-subtle);
+    color: var(--color-warning);
+    border: 1px solid rgba(178, 106, 0, 0.25);
+
+    &:hover:not(:disabled) {
+      background: #ffe6bf;
+    }
+  }
+
+  .btn:focus-visible,
+  button:focus-visible,
+  select:focus-visible,
+  input:focus-visible {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 1px;
+  }
+
+  // ------------------------------------------------------------
+  // Alerts
+  // ------------------------------------------------------------
+  .alert-error {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 1rem;
+
+    .alert-error-body {
+      display: flex;
+      flex-direction: column;
+      gap: 0.15rem;
+    }
+
+    .alert-error-actions {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      flex-shrink: 0;
+    }
+  }
+
+  // ------------------------------------------------------------
+  // Filter card
+  // ------------------------------------------------------------
+  .filter-card {
+    padding: 1.25rem 1.5rem;
+  }
+
+  .filter-grid {
+    display: grid;
+    grid-template-columns: 2fr 1fr 1fr 1fr 1fr;
+    gap: 1rem;
+    align-items: end;
+
+    @media (max-width: 1100px) {
+      grid-template-columns: repeat(2, 1fr);
+    }
+    @media (max-width: 640px) {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  .filter-search { grid-column: span 1; }
+
+  .filter-card .form-group label {
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: var(--color-text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+  }
+
+  .filter-card .form-control {
+    height: 42px;
+    border-radius: var(--radius-md);
+    border: 1px solid var(--color-border);
+
+    &:hover { border-color: var(--color-border-strong); }
+
+    &:focus {
+      border-color: var(--color-primary);
+      box-shadow: 0 0 0 3px var(--color-primary-subtle);
+    }
+  }
+
+  .filter-actions {
+    display: flex;
+    gap: 0.5rem;
+    margin-top: 1rem;
+  }
+
+  // ------------------------------------------------------------
+  // Table card
+  // ------------------------------------------------------------
+  .table-card {
+    padding: 0;
+    overflow: hidden;
+    box-shadow: var(--shadow-sm);
+    border: 1px solid var(--color-border);
+  }
+
+  .table-wrapper {
+    overflow-x: auto;
+  }
+
+  .app-master-table {
+    th {
+      background: var(--table-header-bg);
+      color: var(--color-text-secondary);
+      font-size: 0.75rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+      padding: 0.85rem 1rem;
+      border-bottom: 1px solid var(--color-border);
+    }
+
+    td {
+      padding: 0.95rem 1rem;
+      font-size: 0.875rem;
+      border-bottom: 1px solid var(--color-border);
+      vertical-align: middle;
+    }
+
+    tr:last-child td { border-bottom: none; }
+
+    // Alternating row backgrounds (zebra striping) — purely CSS-driven via
+    // :nth-child, so it automatically follows whatever rows are currently
+    // rendered after search/filter/sort/pagination with no extra logic.
+    tbody tr:nth-child(odd) td  { background: var(--table-row-odd); }
+    tbody tr:nth-child(even) td { background: var(--table-row-even); }
+
+    // Hover must override the zebra stripe so the hovered row is obvious.
+    tbody tr:hover td {
+      background: var(--table-row-hover) !important;
+    }
+  }
+
+  .app-code-strong {
+    font-weight: 600;
+    color: var(--color-text-primary);
+  }
+
+  // ------------------------------------------------------------
+  // Lifecycle status pill badges
+  // ------------------------------------------------------------
+  .status-pill {
+    display: inline-block;
+    padding: 0.2rem 0.65rem;
+    border-radius: 999px;
+    font-size: 0.72rem;
+    font-weight: 600;
+    letter-spacing: 0.01em;
+
+    &.status-pill-active      { background: var(--color-success-subtle); color: var(--color-success); }
+    &.status-pill-inactive    { background: var(--color-surface-subtle); color: var(--color-text-secondary); }
+    &.status-pill-deprecated  { background: var(--color-danger-subtle); color: var(--color-danger); }
+    &.status-pill-future      { background: var(--color-future-subtle); color: var(--color-future); }
+    &.status-pill-default     { background: var(--color-surface-subtle); color: var(--color-text-secondary); }
+  }
+
+  // ------------------------------------------------------------
+  // Active column chip
+  // ------------------------------------------------------------
+  .active-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-size: 0.78rem;
+    font-weight: 600;
+
+    .dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      display: inline-block;
+    }
+
+    &.active-chip-on {
+      color: var(--color-success);
+      .dot { background: var(--color-success); }
+    }
+
+    &.active-chip-off {
+      color: var(--color-text-secondary);
+      .dot { background: var(--color-text-muted); }
+    }
+  }
+
+  // ------------------------------------------------------------
+  // Row actions
+  // ------------------------------------------------------------
+  .actions-cell {
+    display: flex;
+    gap: 0.4rem;
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+
+  .btn-row-action {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    background: transparent;
+    border: 1px solid var(--color-border);
+    color: var(--color-primary);
+    font-size: 0.78rem;
+    font-weight: 600;
+    padding: 0.35rem 0.65rem;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    transition: background var(--transition-fast), border-color var(--transition-fast);
+
+    &:hover {
+      background: var(--color-primary-subtle);
+      border-color: var(--color-primary);
+    }
+
+    &.btn-row-action-warning {
+      color: var(--color-warning);
+      &:hover { background: var(--color-warning-subtle); border-color: var(--color-warning); }
+    }
+
+    &.btn-row-action-positive {
+      color: var(--color-success);
+      &:hover { background: var(--color-success-subtle); border-color: var(--color-success); }
+    }
+
+    &.btn-row-action-danger {
+      color: var(--color-danger);
+      &:hover { background: var(--color-danger-subtle); border-color: var(--color-danger); }
+    }
+  }
+
+  // ------------------------------------------------------------
+  // Empty state
+  // ------------------------------------------------------------
+  .empty-state {
+    padding: 2.5rem 1rem;
+    text-align: center;
+
+    .empty-state-title {
+      font-size: 0.95rem;
+      font-weight: 600;
+      color: var(--color-text-primary);
+      margin: 0 0 0.3rem;
+    }
+
+    .empty-state-subtext {
+      font-size: 0.82rem;
+      color: var(--color-text-secondary);
+      margin: 0 0 0.75rem;
+    }
+  }
+
+  // ------------------------------------------------------------
+  // Pagination
+  // ------------------------------------------------------------
+  .pagination-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    padding: 1rem 1.25rem;
+    border-top: 1px solid var(--color-border);
+  }
+
+  .pagination-summary {
+    font-size: 0.8rem;
+    color: var(--color-text-secondary);
+  }
+
+  .pagination-controls {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  // ------------------------------------------------------------
+  // Modals (content polish only — overlay/box reused from global)
+  // ------------------------------------------------------------
+  .modal-title {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: var(--color-primary-dark);
+  }
+
+  .field-hint {
+    font-size: 0.8rem;
+    color: var(--color-text-secondary);
+    margin-top: 0.25rem;
+  }
+
+  .form-row {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1rem;
+    margin-bottom: 1rem;
+
+    @media (max-width: 480px) {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  .row-error {
+    background-color: var(--color-danger-subtle);
+  }
+
+  .import-preview {
+    max-height: 400px;
+    overflow-y: auto;
+  }
+}

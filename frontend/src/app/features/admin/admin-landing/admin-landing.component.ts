@@ -31,12 +31,42 @@ import { UserMe } from '../../../core/models/auth.model';
           <p>Assign technicians to applications with allocation percentages.</p>
           <span class="badge badge-available">Available</span>
         </a>
-        <div class="info-card">
+        <a routerLink="/admin/applications" class="info-card info-card-link">
+          <div class="info-card-icon">🗂️</div>
+          <h3>Application Master</h3>
+          <p>Create, edit, deactivate and bulk-import applications — fully data-driven, no code changes needed.</p>
+          <span class="badge badge-available">Available</span>
+        </a>
+        <a routerLink="/admin/skills" class="info-card info-card-link">
           <div class="info-card-icon">📋</div>
-          <h3>Skill Catalogue</h3>
+          <h3>Skill Management</h3>
           <p>Define and manage the skill catalogue for the platform.</p>
-          <span class="badge badge-coming-soon">Coming Soon</span>
-        </div>
+          <span class="badge badge-available">Available</span>
+        </a>
+        <a routerLink="/admin/skill-import" class="info-card info-card-link">
+          <div class="info-card-icon">📥</div>
+          <h3>Skill Import</h3>
+          <p>Import skills from Excel with validation and preview.</p>
+          <span class="badge badge-available">Available</span>
+        </a>
+        <a routerLink="/admin/skill-requirements" class="info-card info-card-link">
+          <div class="info-card-icon">🧩</div>
+          <h3>Skill Requirement Mapping</h3>
+          <p>Map Skill Master records to applications with expected level and mandatory flag.</p>
+          <span class="badge badge-available">Available</span>
+        </a>
+        <a routerLink="/admin/import-history" class="info-card info-card-link">
+          <div class="info-card-icon">📜</div>
+          <h3>Import History</h3>
+          <p>View all past skill import operations and their results.</p>
+          <span class="badge badge-available">Available</span>
+        </a>
+        <a routerLink="/admin/assessment-cycles" class="info-card info-card-link">
+          <div class="info-card-icon">🗓️</div>
+          <h3>Assessment Cycle Management</h3>
+          <p>Create, open and close technician self-assessment cycles.</p>
+          <span class="badge badge-available">Available</span>
+        </a>
         <div class="info-card">
           <div class="info-card-icon">📊</div>
           <h3>Reports & Analytics</h3>

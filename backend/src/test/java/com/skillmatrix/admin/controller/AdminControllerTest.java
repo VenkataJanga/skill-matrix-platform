@@ -10,7 +10,11 @@ import com.skillmatrix.admin.dto.DuplicateCheckResponse;
 import com.skillmatrix.admin.dto.UserDetailDto;
 import com.skillmatrix.admin.dto.UserSummaryDto;
 import com.skillmatrix.admin.service.AdminAssignmentService;
+import com.skillmatrix.admin.service.AdminUserDeleteService;
+import com.skillmatrix.admin.service.AdminUserImportService;
 import com.skillmatrix.admin.service.AdminUserService;
+import com.skillmatrix.admin.service.AssignmentImportService;
+import com.skillmatrix.auth.service.PasswordResetService;
 import com.skillmatrix.auth.service.AuthService;
 import com.skillmatrix.auth.service.JwtService;
 import com.skillmatrix.auth.service.RefreshTokenService;
@@ -66,6 +70,10 @@ class AdminControllerTest {
 
     @MockBean AdminUserService adminUserService;
     @MockBean AdminAssignmentService adminAssignmentService;
+    @MockBean AdminUserImportService adminUserImportService;
+    @MockBean AdminUserDeleteService adminUserDeleteService;
+    @MockBean AssignmentImportService assignmentImportService;
+    @MockBean PasswordResetService passwordResetService;
     @MockBean AuthService authService;
     @MockBean JwtService jwtService;
     @MockBean RefreshTokenService refreshTokenService;
@@ -92,7 +100,7 @@ class AdminControllerTest {
                 "pub-map-1", "pub-tech-1", "deepak_mishra", "Deepak Mishra",
                 "pub-atlas", "ATLAS", "ATLAS-deZentral",
                 "WEB", "B06", BigDecimal.valueOf(100),
-                LocalDate.of(2026, 1, 1), null, true);
+                LocalDate.of(2026, 1, 1), null, true, null, false);
     }
 
     // ---------------------------------------------------------------

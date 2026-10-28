@@ -33,4 +33,12 @@ public interface RefreshTokenRepository extends JpaRepository<RefreshToken, Long
             WHERE rt.expiresAt < :now AND rt.deleted = false
             """)
     int softDeleteExpired(@Param("now") LocalDateTime now);
+
+    /**
+     * Pre-delete cleanup: permanently remove ALL refresh tokens for a user
+     * that is being hard-deleted.  Session tokens are not business history.
+     */
+    @Modifying
+    @Query("DELETE FROM RefreshToken rt WHERE rt.user = :user")
+    void deleteAllByUser(@Param("user") User user);
 }

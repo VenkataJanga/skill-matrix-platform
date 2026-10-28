@@ -9,6 +9,9 @@ import {
   ChangePasswordRequest,
   TokenResponse,
   UserMe,
+  ForgotPasswordRequest,
+  ForgotPasswordResponse,
+  ResetPasswordRequest,
 } from '../models/auth.model';
 
 const API_BASE = 'http://localhost:8080/api/v1/auth';
@@ -102,6 +105,14 @@ export class AuthService {
 
   changePassword(payload: ChangePasswordRequest): Observable<ApiResponse<void>> {
     return this.http.post<ApiResponse<void>>(`${API_BASE}/change-password`, payload);
+  }
+
+  forgotPassword(payload: ForgotPasswordRequest): Observable<ApiResponse<ForgotPasswordResponse>> {
+    return this.http.post<ApiResponse<ForgotPasswordResponse>>(`${API_BASE}/forgot-password`, payload);
+  }
+
+  resetPassword(payload: ResetPasswordRequest): Observable<ApiResponse<void>> {
+    return this.http.post<ApiResponse<void>>(`${API_BASE}/reset-password`, payload);
   }
 
   logout(): void {
