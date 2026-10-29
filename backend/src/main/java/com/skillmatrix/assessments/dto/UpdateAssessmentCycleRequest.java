@@ -10,6 +10,11 @@ public record UpdateAssessmentCycleRequest(
         @NotBlank(message = "cycleName is required")
         String cycleName,
 
+        /** Structured period metadata (M4 — New Cycle UX). Optional for backward compatibility. */
+        String periodTypeCode,
+        String periodValue,
+        Integer periodYear,
+
         @NotNull(message = "cycleStartDate is required")
         LocalDate cycleStartDate,
 

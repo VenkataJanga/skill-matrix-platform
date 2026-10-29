@@ -16,7 +16,7 @@ import {
   UpdateSkillRequirementRequest,
 } from '../models/requirement.model';
 
-const API_BASE = 'http://localhost:8080/api/v1/admin';
+const API_BASE = 'http://localhost:9090/api/v1/admin';
 
 @Injectable({ providedIn: 'root' })
 export class RequirementService {

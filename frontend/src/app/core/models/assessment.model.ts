@@ -12,6 +12,9 @@ export interface AssessmentCycle {
   requirementVersionPublicId: string;
   requirementVersionCode: string;
   cycleName: string;
+  periodTypeCode: string | null;
+  periodValue: string | null;
+  periodYear: number | null;
   cycleStartDate: string;
   cycleEndDate: string;
   statusCode: string | null;
@@ -27,12 +30,18 @@ export interface CreateAssessmentCycleRequest {
   applicationPublicId: string;
   requirementVersionPublicId: string;
   cycleName: string;
+  periodTypeCode?: string | null;
+  periodValue?: string | null;
+  periodYear?: number | null;
   cycleStartDate: string;
   cycleEndDate: string;
 }
 
 export interface UpdateAssessmentCycleRequest {
   cycleName: string;
+  periodTypeCode?: string | null;
+  periodValue?: string | null;
+  periodYear?: number | null;
   cycleStartDate: string;
   cycleEndDate: string;
   applicationPublicId?: string | null;

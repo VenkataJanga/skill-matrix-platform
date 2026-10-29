@@ -88,7 +88,7 @@ describe('AuthService', () => {
         expect(service.getRefreshToken()).toBe('test-refresh-token');
       });
 
-      const req = httpMock.expectOne('http://localhost:8080/api/v1/auth/login');
+      const req = httpMock.expectOne('http://localhost:9090/api/v1/auth/login');
       expect(req.request.method).toBe('POST');
       req.flush(response);
     });
@@ -104,7 +104,7 @@ describe('AuthService', () => {
         expect(service.getAccessToken()).toBeNull();
       });
 
-      const req = httpMock.expectOne('http://localhost:8080/api/v1/auth/login');
+      const req = httpMock.expectOne('http://localhost:9090/api/v1/auth/login');
       req.flush(response);
     });
   });
@@ -118,7 +118,7 @@ describe('AuthService', () => {
         expect(service.getCurrentUser()).toEqual(mockUserMe);
       });
 
-      const req = httpMock.expectOne('http://localhost:8080/api/v1/auth/me');
+      const req = httpMock.expectOne('http://localhost:9090/api/v1/auth/me');
       expect(req.request.method).toBe('GET');
       req.flush(response);
     });
@@ -132,7 +132,7 @@ describe('AuthService', () => {
         },
       });
 
-      const req = httpMock.expectOne('http://localhost:8080/api/v1/auth/me');
+      const req = httpMock.expectOne('http://localhost:9090/api/v1/auth/me');
       req.flush('Unauthorized', { status: 401, statusText: 'Unauthorized' });
     });
   });
@@ -145,7 +145,7 @@ describe('AuthService', () => {
       service.logout();
 
       // Flush the fire-and-forget logout request
-      const req = httpMock.expectOne('http://localhost:8080/api/v1/auth/logout');
+      const req = httpMock.expectOne('http://localhost:9090/api/v1/auth/logout');
       req.flush({ success: true });
 
       expect(service.getAccessToken()).toBeNull();

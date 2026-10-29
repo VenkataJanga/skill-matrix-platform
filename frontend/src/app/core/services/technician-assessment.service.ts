@@ -9,7 +9,7 @@ import {
   TechnicianAssessmentSummary,
 } from '../models/assessment.model';
 
-const API_BASE = 'http://localhost:8080/api/v1/technician';
+const API_BASE = 'http://localhost:9090/api/v1/technician';
 
 /**
  * M4B — Technician Self-Assessment.

@@ -23,6 +23,15 @@ public interface ExpectedRatingRepository extends JpaRepository<ExpectedRating, 
 
     boolean existsByRequirementVersion_IdAndSkill_IdAndIdNot(Long requirementVersionId, Long skillId, Long id);
 
+    /**
+     * Count of ACTIVE skill requirements for a Requirement Version. Used by the
+     * Assessment Cycle "Requirement Version" dropdown to warn Admin BEFORE cycle
+     * creation when a version has zero active requirements — the backend Open-time
+     * safeguard in AssessmentCycleService.openCycle() remains the final authoritative
+     * check and is unchanged by this query.
+     */
+    long countByRequirementVersion_IdAndActiveTrue(Long requirementVersionId);
+
     @Query("""
             SELECT er FROM ExpectedRating er
             JOIN FETCH er.skill s

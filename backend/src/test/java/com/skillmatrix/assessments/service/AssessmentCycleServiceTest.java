@@ -102,7 +102,7 @@ class AssessmentCycleServiceTest {
     @DisplayName("createCycle succeeds for valid application and requirement version")
     void createCycle_success() {
         CreateAssessmentCycleRequest req = new CreateAssessmentCycleRequest(
-                "pub-app-atlas", "pub-rv-1", "ATLAS FY26", LocalDate.of(2026, 1, 1), LocalDate.of(2026, 3, 31));
+                "pub-app-atlas", "pub-rv-1", "ATLAS FY26", null, null, null, LocalDate.of(2026, 1, 1), LocalDate.of(2026, 3, 31));
 
         when(applicationRepository.findByPublicId("pub-app-atlas")).thenReturn(Optional.of(atlasApp));
         when(requirementVersionRepository.findByPublicId("pub-rv-1")).thenReturn(Optional.of(rv));
@@ -127,7 +127,7 @@ class AssessmentCycleServiceTest {
     @DisplayName("createCycle rejects an exact duplicate cycle name for the same application with a friendly 409 message")
     void createCycle_exactDuplicateName_rejected() {
         CreateAssessmentCycleRequest req = new CreateAssessmentCycleRequest(
-                "pub-app-atlas", "pub-rv-1", "ATLAS Q3 2026 Assessment", LocalDate.of(2026, 10, 26), LocalDate.of(2026, 11, 26));
+                "pub-app-atlas", "pub-rv-1", "ATLAS Q3 2026 Assessment", null, null, null, LocalDate.of(2026, 10, 26), LocalDate.of(2026, 11, 26));
 
         AssessmentCycle existing = AssessmentCycle.builder().id(5L).publicId("pub-cycle-q3")
                 .application(atlasApp).requirementVersion(rv).cycleName("ATLAS Q3 2026 Assessment")
@@ -151,7 +151,7 @@ class AssessmentCycleServiceTest {
     @DisplayName("createCycle rejects a duplicate name that only differs by leading/trailing whitespace")
     void createCycle_trimmedDuplicateName_rejected() {
         CreateAssessmentCycleRequest req = new CreateAssessmentCycleRequest(
-                "pub-app-atlas", "pub-rv-1", "  ATLAS Q3 2026 Assessment  ", LocalDate.of(2026, 10, 26), LocalDate.of(2026, 11, 26));
+                "pub-app-atlas", "pub-rv-1", "  ATLAS Q3 2026 Assessment  ", null, null, null, LocalDate.of(2026, 10, 26), LocalDate.of(2026, 11, 26));
 
         AssessmentCycle existing = AssessmentCycle.builder().id(5L).publicId("pub-cycle-q3")
                 .application(atlasApp).requirementVersion(rv).cycleName("ATLAS Q3 2026 Assessment")
@@ -172,7 +172,7 @@ class AssessmentCycleServiceTest {
     @DisplayName("createCycle rejects a case-insensitive duplicate name")
     void createCycle_caseInsensitiveDuplicateName_rejected() {
         CreateAssessmentCycleRequest req = new CreateAssessmentCycleRequest(
-                "pub-app-atlas", "pub-rv-1", "atlas q3 2026 assessment", LocalDate.of(2026, 10, 26), LocalDate.of(2026, 11, 26));
+                "pub-app-atlas", "pub-rv-1", "atlas q3 2026 assessment", null, null, null, LocalDate.of(2026, 10, 26), LocalDate.of(2026, 11, 26));
 
         AssessmentCycle existing = AssessmentCycle.builder().id(5L).publicId("pub-cycle-q3")
                 .application(atlasApp).requirementVersion(rv).cycleName("ATLAS Q3 2026 Assessment")
@@ -193,7 +193,7 @@ class AssessmentCycleServiceTest {
     @DisplayName("createCycle succeeds with a unique cycle name even when an expired OPEN cycle exists for the same application")
     void createCycle_uniqueNameWithExistingExpiredCycle_succeeds() {
         CreateAssessmentCycleRequest req = new CreateAssessmentCycleRequest(
-                "pub-app-atlas", "pub-rv-1", "ATLAS Q4 2026 Assessment", LocalDate.of(2026, 10, 26), LocalDate.of(2026, 11, 26));
+                "pub-app-atlas", "pub-rv-1", "ATLAS Q4 2026 Assessment", null, null, null, LocalDate.of(2026, 10, 26), LocalDate.of(2026, 11, 26));
 
         when(applicationRepository.findByPublicId("pub-app-atlas")).thenReturn(Optional.of(atlasApp));
         when(requirementVersionRepository.findByPublicId("pub-rv-1")).thenReturn(Optional.of(rv));
@@ -220,7 +220,7 @@ class AssessmentCycleServiceTest {
                 .statusLookup(closed).active(true).build();
 
         CreateAssessmentCycleRequest req = new CreateAssessmentCycleRequest(
-                "pub-app-atlas", "pub-rv-1", "ATLAS Q3 2026 Assessment", LocalDate.of(2026, 10, 26), LocalDate.of(2026, 11, 26));
+                "pub-app-atlas", "pub-rv-1", "ATLAS Q3 2026 Assessment", null, null, null, LocalDate.of(2026, 10, 26), LocalDate.of(2026, 11, 26));
 
         when(applicationRepository.findByPublicId("pub-app-atlas")).thenReturn(Optional.of(atlasApp));
         when(requirementVersionRepository.findByPublicId("pub-rv-1")).thenReturn(Optional.of(rv));
@@ -236,7 +236,7 @@ class AssessmentCycleServiceTest {
     @DisplayName("historical cycle is never deleted or overwritten when a new differently-named cycle is created")
     void createCycle_neverDeletesOrOverwritesHistoricalCycle() {
         CreateAssessmentCycleRequest req = new CreateAssessmentCycleRequest(
-                "pub-app-atlas", "pub-rv-1", "ATLAS Q4 2026 Assessment", LocalDate.of(2026, 10, 26), LocalDate.of(2026, 11, 26));
+                "pub-app-atlas", "pub-rv-1", "ATLAS Q4 2026 Assessment", null, null, null, LocalDate.of(2026, 10, 26), LocalDate.of(2026, 11, 26));
 
         when(applicationRepository.findByPublicId("pub-app-atlas")).thenReturn(Optional.of(atlasApp));
         when(requirementVersionRepository.findByPublicId("pub-rv-1")).thenReturn(Optional.of(rv));
@@ -258,7 +258,7 @@ class AssessmentCycleServiceTest {
     @DisplayName("createCycle rejects invalid application")
     void createCycle_invalidApplication() {
         CreateAssessmentCycleRequest req = new CreateAssessmentCycleRequest(
-                "bad-app", "pub-rv-1", "Cycle", LocalDate.of(2026, 1, 1), LocalDate.of(2026, 3, 31));
+                "bad-app", "pub-rv-1", "Cycle", null, null, null, LocalDate.of(2026, 1, 1), LocalDate.of(2026, 3, 31));
         when(applicationRepository.findByPublicId("bad-app")).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> service.createCycle(req, "admin")).isInstanceOf(BusinessException.class);
@@ -273,7 +273,7 @@ class AssessmentCycleServiceTest {
                 .application(other).versionCode("v1.0").active(true).build();
 
         CreateAssessmentCycleRequest req = new CreateAssessmentCycleRequest(
-                "pub-app-atlas", "pub-rv-other", "Cycle", LocalDate.of(2026, 1, 1), LocalDate.of(2026, 3, 31));
+                "pub-app-atlas", "pub-rv-other", "Cycle", null, null, null, LocalDate.of(2026, 1, 1), LocalDate.of(2026, 3, 31));
         when(applicationRepository.findByPublicId("pub-app-atlas")).thenReturn(Optional.of(atlasApp));
         when(requirementVersionRepository.findByPublicId("pub-rv-other")).thenReturn(Optional.of(otherRv));
 
@@ -284,7 +284,7 @@ class AssessmentCycleServiceTest {
     @DisplayName("createCycle rejects end date before start date")
     void createCycle_invalidDates() {
         CreateAssessmentCycleRequest req = new CreateAssessmentCycleRequest(
-                "pub-app-atlas", "pub-rv-1", "Cycle", LocalDate.of(2026, 3, 31), LocalDate.of(2026, 1, 1));
+                "pub-app-atlas", "pub-rv-1", "Cycle", null, null, null, LocalDate.of(2026, 3, 31), LocalDate.of(2026, 1, 1));
         when(applicationRepository.findByPublicId("pub-app-atlas")).thenReturn(Optional.of(atlasApp));
         when(requirementVersionRepository.findByPublicId("pub-rv-1")).thenReturn(Optional.of(rv));
 
@@ -371,7 +371,7 @@ class AssessmentCycleServiceTest {
         when(headerRepository.existsByCycle_Id(1L)).thenReturn(true);
 
         UpdateAssessmentCycleRequest req = new UpdateAssessmentCycleRequest(
-                "ATLAS FY26 Renamed", LocalDate.of(2026, 1, 1), LocalDate.of(2026, 3, 31),
+                "ATLAS FY26 Renamed", null, null, null, LocalDate.of(2026, 1, 1), LocalDate.of(2026, 3, 31),
                 "pub-app-other", null);
 
         assertThatThrownBy(() -> service.updateCycle("pub-cycle-1", req, "admin"))
@@ -387,7 +387,7 @@ class AssessmentCycleServiceTest {
         when(cycleRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
         UpdateAssessmentCycleRequest req = new UpdateAssessmentCycleRequest(
-                "ATLAS FY26 Renamed", LocalDate.of(2026, 2, 1), LocalDate.of(2026, 4, 30), null, null);
+                "ATLAS FY26 Renamed", null, null, null, LocalDate.of(2026, 2, 1), LocalDate.of(2026, 4, 30), null, null);
 
         var dto = service.updateCycle("pub-cycle-1", req, "admin");
 
@@ -400,7 +400,7 @@ class AssessmentCycleServiceTest {
         when(cycleRepository.findByPublicId("pub-cycle-2")).thenReturn(Optional.of(openCycle));
 
         UpdateAssessmentCycleRequest req = new UpdateAssessmentCycleRequest(
-                "Name", LocalDate.of(2026, 1, 1), LocalDate.of(2026, 3, 31), null, null);
+                "Name", null, null, null, LocalDate.of(2026, 1, 1), LocalDate.of(2026, 3, 31), null, null);
 
         assertThatThrownBy(() -> service.updateCycle("pub-cycle-2", req, "admin"))
                 .isInstanceOf(BusinessException.class);
@@ -568,10 +568,6 @@ class AssessmentCycleServiceTest {
     @Test
     @DisplayName("Application/Requirement Version cannot be edited (via updateCycle) once technician headers exist, even after a reopen")
     void updateCycle_applicationVersionLockedAfterReopenAndHeaderExists() {
-        // Reopened cycles are OPEN again, and updateCycle only permits edits while PLANNED anyway —
-        // this test documents that the existing lock is unaffected by the reopen feature: an OPEN
-        // cycle (whether freshly opened or reopened) can never have its Application/Requirement
-        // Version changed via updateCycle, regardless of header existence.
         when(cycleRepository.findByPublicId("pub-cycle-closed")).thenReturn(Optional.of(
                 AssessmentCycle.builder().id(3L).publicId("pub-cycle-closed")
                         .application(atlasApp).requirementVersion(rv).cycleName("ATLAS Q2 2026 Assessment")
@@ -580,7 +576,7 @@ class AssessmentCycleServiceTest {
                         .active(true).build()));
 
         UpdateAssessmentCycleRequest req = new UpdateAssessmentCycleRequest(
-                "New Name", FIXED_TODAY, FIXED_TODAY.plusDays(30), "pub-app-other", null);
+                "New Name", null, null, null, FIXED_TODAY, FIXED_TODAY.plusDays(30), "pub-app-other", null);
 
         assertThatThrownBy(() -> service.updateCycle("pub-cycle-closed", req, "admin"))
                 .isInstanceOf(BusinessException.class)

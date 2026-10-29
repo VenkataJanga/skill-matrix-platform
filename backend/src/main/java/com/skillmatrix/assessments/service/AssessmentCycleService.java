@@ -105,6 +105,9 @@ public class AssessmentCycleService {
                 .application(app)
                 .requirementVersion(rv)
                 .cycleName(req.cycleName().trim())
+                .periodTypeCode(blank(req.periodTypeCode()) ? null : req.periodTypeCode().trim())
+                .periodValue(blank(req.periodValue()) ? null : req.periodValue().trim())
+                .periodYear(req.periodYear())
                 .cycleStartDate(req.cycleStartDate())
                 .cycleEndDate(req.cycleEndDate())
                 .statusLookup(plannedStatus)
@@ -160,6 +163,9 @@ public class AssessmentCycleService {
         }
 
         cycle.setCycleName(req.cycleName().trim());
+        cycle.setPeriodTypeCode(blank(req.periodTypeCode()) ? null : req.periodTypeCode().trim());
+        cycle.setPeriodValue(blank(req.periodValue()) ? null : req.periodValue().trim());
+        cycle.setPeriodYear(req.periodYear());
         cycle.setCycleStartDate(req.cycleStartDate());
         cycle.setCycleEndDate(req.cycleEndDate());
         cycle.setUpdatedBy(actorUsername);

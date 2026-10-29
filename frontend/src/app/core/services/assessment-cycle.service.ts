@@ -11,7 +11,7 @@ import {
   UpdateAssessmentCycleRequest,
 } from '../models/assessment.model';
 
-const API_BASE = 'http://localhost:8080/api/v1/admin/assessment-cycles';
+const API_BASE = 'http://localhost:9090/api/v1/admin/assessment-cycles';
 
 /** M4A — Admin Assessment Cycle Management. */
 @Injectable({ providedIn: 'root' })

@@ -39,6 +39,17 @@ public class AssessmentCycle {
     @Column(name = "cycle_name", nullable = false, length = 100)
     private String cycleName;
 
+    /** Structured period metadata (M4 — New Cycle UX). Nullable for legacy rows created before V15. */
+    @Column(name = "period_type_code", length = 20)
+    private String periodTypeCode;
+
+    /** e.g. "Q4", "OCTOBER", "H1", null for ANNUAL, or the custom label for CUSTOM. */
+    @Column(name = "period_value", length = 50)
+    private String periodValue;
+
+    @Column(name = "period_year")
+    private Integer periodYear;
+
     @Column(name = "cycle_start_date", nullable = false)
     private LocalDate cycleStartDate;
 

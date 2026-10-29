@@ -14,7 +14,7 @@ import {
   ResetPasswordRequest,
 } from '../models/auth.model';
 
-const API_BASE = 'http://localhost:8080/api/v1/auth';
+const API_BASE = 'http://localhost:9090/api/v1/auth';
 const ACCESS_TOKEN_KEY = 'sm_access_token';
 const REFRESH_TOKEN_KEY = 'sm_refresh_token';
 

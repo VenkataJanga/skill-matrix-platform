@@ -39,7 +39,7 @@ import {
   UserValidationResult,
 } from '../models/application.model';
 
-const API_BASE = 'http://localhost:8080/api/v1';
+const API_BASE = 'http://localhost:9090/api/v1';
 
 @Injectable({ providedIn: 'root' })
 export class ApplicationService {

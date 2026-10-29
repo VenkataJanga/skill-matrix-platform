@@ -1,6 +1,7 @@
 import { Component, HostListener, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { RouterModule } from '@angular/router';
 import { AssessmentCycleService } from '../../../core/services/assessment-cycle.service';
 import { RequirementService } from '../../../core/services/requirement.service';
 import { ApplicationService } from '../../../core/services/application.service';
@@ -13,15 +14,36 @@ import {
 import { RequirementVersion } from '../../../core/models/requirement.model';
 import { PagedResponse, ApplicationType, Bundle, Application } from '../../../core/models/application.model';
 
+export const QUARTERS = ['Q1', 'Q2', 'Q3', 'Q4'];
+export const HALF_YEARS = ['H1', 'H2'];
+export const MONTHS = ['JANUARY','FEBRUARY','MARCH','APRIL','MAY','JUNE','JULY','AUGUST','SEPTEMBER','OCTOBER','NOVEMBER','DECEMBER'];
+export const MONTH_LABELS: Record<string, string> = {
+  JANUARY:'January', FEBRUARY:'February', MARCH:'March', APRIL:'April', MAY:'May', JUNE:'June',
+  JULY:'July', AUGUST:'August', SEPTEMBER:'September', OCTOBER:'October', NOVEMBER:'November', DECEMBER:'December',
+};
+
+export interface CycleForm {
+  typeCode: string;
+  bundleCode: string;
+  applicationPublicId: string;
+  periodTypeCode: string;
+  periodValue: string;
+  periodYear: number | null;
+  customLabel: string;
+  cycleName: string;
+  requirementVersionPublicId: string;
+  cycleStartDate: string;
+  cycleEndDate: string;
+}
+
 @Component({
   selector: 'app-assessment-cycles',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, RouterModule],
   templateUrl: './assessment-cycles.component.html',
   styleUrl: './assessment-cycles.component.scss',
 })
 export class AssessmentCyclesComponent implements OnInit {
-  // ---- List ----
   pagedCycles: PagedResponse<AssessmentCycle> | null = null;
   loading = false;
   error: string | null = null;
@@ -35,7 +57,6 @@ export class AssessmentCyclesComponent implements OnInit {
 
   applications: Application[] = [];
 
-  // ---- Form (create/edit) ----
   showForm = false;
   formMode: 'create' | 'edit' = 'create';
   editingPublicId: string | null = null;
@@ -47,38 +68,45 @@ export class AssessmentCyclesComponent implements OnInit {
   formApplications: Application[] = [];
   formVersions: RequirementVersion[] = [];
 
-  /** Drives the Requirement Version dropdown's 4-state UI (loading / available / empty / error). */
   versionsLoading = false;
   versionsError = false;
 
-  /** Proactive duplicate-name check (advisory UX only — backend remains authoritative). */
+  /**
+   * True once a Requirement Version has been selected AND it has zero ACTIVE
+   * skill requirements. Drives the early-warning banner and disables
+   * "Save as PLANNED" so Admin cannot create a cycle that would later be
+   * rejected by AssessmentCycleService.openCycle() ("Requirement version has
+   * zero active skill requirements — cannot open cycle"). That backend
+   * Open-time safeguard is unchanged and remains the final authoritative check.
+   */
+  selectedVersionHasNoActiveRequirements = false;
+
   duplicateCycle: AssessmentCycle | null = null;
-  suggestedCycleName: string | null = null;
 
-  /** Optional soft warning when the free-text name implies a quarter outside the selected dates. */
-  nameDateMismatchWarning: string | null = null;
+  periodTypes = ['QUARTERLY', 'MONTHLY', 'HALF_YEARLY', 'ANNUAL', 'CUSTOM'];
+  periodOptions: { code: string; label: string }[] = [];
+  yearOptions: number[] = [];
 
-  form = this.emptyForm();
+  form: CycleForm = this.emptyForm();
 
-  // ---- Open/Close confirm ----
   confirmOpenCycle: AssessmentCycle | null = null;
   confirmCloseCycle: AssessmentCycle | null = null;
 
-  // ---- Reopen (CLOSED -> OPEN, M4 stabilization) ----
   reopenCycleTarget: AssessmentCycle | null = null;
   reopenReason = '';
   reopenNewEndDate = '';
   reopenSubmitting = false;
   reopenError: string | null = null;
 
-  // ---- Detail view ----
   viewingCycle: AssessmentCycle | null = null;
 
   constructor(
     private cycleService: AssessmentCycleService,
     private requirementService: RequirementService,
     private appService: ApplicationService
-  ) {}
+  ) {
+    this.yearOptions = this.buildYearOptions();
+  }
 
   ngOnInit(): void {
     this.appService.getApplicationTypes().subscribe((t) => (this.applicationTypes = t));
@@ -86,8 +114,6 @@ export class AssessmentCyclesComponent implements OnInit {
     this.appService.getApplications().subscribe((apps) => (this.applications = apps));
     this.load();
   }
-
-  // ---- List ----
 
   load(): void {
     this.loading = true;
@@ -127,43 +153,101 @@ export class AssessmentCyclesComponent implements OnInit {
     this.load();
   }
 
-  // ---- Create / Edit form ----
+  private buildYearOptions(): number[] {
+    const y = new Date().getFullYear();
+    return [y - 1, y, y + 1, y + 2];
+  }
+
+  computePeriodOptions(periodTypeCode: string): { code: string; label: string }[] {
+    if (periodTypeCode === 'QUARTERLY') return QUARTERS.map((q) => ({ code: q, label: q }));
+    if (periodTypeCode === 'MONTHLY') return MONTHS.map((m) => ({ code: m, label: MONTH_LABELS[m] }));
+    if (periodTypeCode === 'HALF_YEARLY') return HALF_YEARS.map((h) => ({ code: h, label: h }));
+    return [];
+  }
+
+  onPeriodTypeChange(): void {
+    this.periodOptions = this.computePeriodOptions(this.form.periodTypeCode);
+    this.form.periodValue = '';
+    this.duplicateCycle = null;
+    this.regenerateCycleName();
+  }
+
+  onPeriodValueChange(): void { this.duplicateCycle = null; this.regenerateCycleName(); }
+  onYearChange(): void { this.duplicateCycle = null; this.regenerateCycleName(); }
+  onCustomLabelChange(): void { this.duplicateCycle = null; this.regenerateCycleName(); }
+
+  buildGeneratedName(
+    applicationName: string | null,
+    periodTypeCode: string,
+    periodValue: string,
+    year: number | null,
+    customLabel: string
+  ): string {
+    if (!applicationName || !year) return '';
+    switch (periodTypeCode) {
+      case 'QUARTERLY':
+        return periodValue ? `${applicationName} ${periodValue} ${year} Assessment` : '';
+      case 'MONTHLY':
+        return periodValue ? `${applicationName} ${MONTH_LABELS[periodValue]} ${year} Assessment` : '';
+      case 'HALF_YEARLY':
+        return periodValue ? `${applicationName} ${periodValue} ${year} Assessment` : '';
+      case 'ANNUAL':
+        return `${applicationName} ${year} Annual Assessment`;
+      case 'CUSTOM':
+        return customLabel.trim() ? `${applicationName} ${customLabel.trim()} ${year}` : '';
+      default:
+        return '';
+    }
+  }
+
+  private regenerateCycleName(): void {
+    const appName = this.formApplications.find((a) => a.publicId === this.form.applicationPublicId)?.applicationName ?? null;
+    this.form.cycleName = this.buildGeneratedName(
+      appName, this.form.periodTypeCode, this.form.periodValue, this.form.periodYear, this.form.customLabel
+    );
+  }
+
+  get isAnnual(): boolean { return this.form.periodTypeCode === 'ANNUAL'; }
+  get isCustomPeriod(): boolean { return this.form.periodTypeCode === 'CUSTOM'; }
+
+  private emptyForm(): CycleForm {
+    return {
+      typeCode: '',
+      bundleCode: '',
+      applicationPublicId: '',
+      periodTypeCode: 'QUARTERLY',
+      periodValue: '',
+      periodYear: new Date().getFullYear(),
+      customLabel: '',
+      cycleName: '',
+      requirementVersionPublicId: '',
+      cycleStartDate: '',
+      cycleEndDate: '',
+    };
+  }
+
+  @HostListener('document:keydown.escape')
+  onEscapeKey(): void {
+    if (this.viewingCycle) this.closeDetails();
+    else if (this.confirmOpenCycle) this.cancelOpen();
+    else if (this.confirmCloseCycle) this.cancelClose();
+    else if (this.reopenCycleTarget) this.cancelReopen();
+    else if (this.showForm) this.cancelForm();
+  }
+
+  dismissSuccess(): void { this.successMessage = null; }
+  dismissError(): void { this.error = null; }
 
   openAddForm(): void {
     this.formMode = 'create';
     this.editingPublicId = null;
     this.form = this.emptyForm();
+    this.periodOptions = this.computePeriodOptions(this.form.periodTypeCode);
     this.formError = null;
     this.formApplications = [];
     this.formVersions = [];
+    this.selectedVersionHasNoActiveRequirements = false;
     this.duplicateCycle = null;
-    this.suggestedCycleName = null;
-    this.nameDateMismatchWarning = null;
-    this.showForm = true;
-  }
-
-  /**
-   * "Create Next Cycle" — prefills Application Type/Bundle/Application/Requirement
-   * Version from an expired/closed source cycle, but deliberately leaves Cycle Name
-   * (pre-populated with a suggested new name only) and dates blank so the Admin must
-   * explicitly choose a new assessment period. Never copies the old name verbatim.
-   */
-  createNextCycle(sourceCycle: AssessmentCycle): void {
-    this.formMode = 'create';
-    this.editingPublicId = null;
-    this.form = this.emptyForm();
-    this.form.applicationPublicId = sourceCycle.applicationPublicId;
-    this.form.cycleName = this.buildSuggestedName(sourceCycle.applicationName, null, null);
-    this.formError = null;
-    this.duplicateCycle = null;
-    this.suggestedCycleName = null;
-    this.nameDateMismatchWarning = null;
-    this.formApplications = [{
-      publicId: sourceCycle.applicationPublicId,
-      applicationCode: sourceCycle.applicationCode,
-      applicationName: sourceCycle.applicationName,
-    } as Application];
-    this.loadEligibleVersions(sourceCycle.applicationPublicId);
     this.showForm = true;
   }
 
@@ -174,18 +258,80 @@ export class AssessmentCyclesComponent implements OnInit {
       typeCode: '',
       bundleCode: '',
       applicationPublicId: cycle.applicationPublicId,
-      requirementVersionPublicId: cycle.requirementVersionPublicId,
+      periodTypeCode: cycle.periodTypeCode ?? 'QUARTERLY',
+      periodValue: cycle.periodValue ?? '',
+      periodYear: cycle.periodYear ?? new Date().getFullYear(),
+      customLabel: cycle.periodTypeCode === 'CUSTOM' ? (cycle.periodValue ?? '') : '',
       cycleName: cycle.cycleName,
+      requirementVersionPublicId: cycle.requirementVersionPublicId,
       cycleStartDate: cycle.cycleStartDate,
       cycleEndDate: cycle.cycleEndDate,
     };
+    this.periodOptions = this.computePeriodOptions(this.form.periodTypeCode);
     this.formError = null;
     this.formApplications = [{ publicId: cycle.applicationPublicId, applicationCode: cycle.applicationCode, applicationName: cycle.applicationName } as Application];
     this.loadEligibleVersions(cycle.applicationPublicId);
+    this.duplicateCycle = null;
     this.showForm = true;
   }
 
-  cancelForm(): void { this.showForm = false; this.formError = null; }
+  /**
+   * "Create Next Cycle" — prefills Application Type/Bundle/Application and computes
+   * the NEXT structured period (Period Type/Period/Year) deterministically from the
+   * source cycle's own structured period metadata — never by parsing cycleName text.
+   * Legacy cycles without period metadata fall back to QUARTERLY/Q1/current year.
+   */
+  createNextCycle(sourceCycle: AssessmentCycle): void {
+    this.formMode = 'create';
+    this.editingPublicId = null;
+    this.form = this.emptyForm();
+
+    this.form.applicationPublicId = sourceCycle.applicationPublicId;
+    const next = this.computeNextPeriod(sourceCycle);
+    this.form.periodTypeCode = next.periodTypeCode;
+    this.form.periodValue = next.periodValue;
+    this.form.periodYear = next.periodYear;
+    this.periodOptions = this.computePeriodOptions(this.form.periodTypeCode);
+
+    this.formError = null;
+    this.duplicateCycle = null;
+    this.formApplications = [{
+      publicId: sourceCycle.applicationPublicId,
+      applicationCode: sourceCycle.applicationCode,
+      applicationName: sourceCycle.applicationName,
+    } as Application];
+    this.regenerateCycleName();
+    this.loadEligibleVersions(sourceCycle.applicationPublicId);
+    this.showForm = true;
+  }
+
+  /** Computes the next structured period from a source cycle's own period metadata. */
+  computeNextPeriod(sourceCycle: AssessmentCycle): { periodTypeCode: string; periodValue: string; periodYear: number } {
+    const fallbackYear = new Date().getFullYear();
+    const periodType = sourceCycle.periodTypeCode ?? 'QUARTERLY';
+    const year = sourceCycle.periodYear ?? fallbackYear;
+    const value = sourceCycle.periodValue ?? 'Q1';
+
+    if (periodType === 'QUARTERLY') {
+      const idx = QUARTERS.indexOf(value);
+      if (idx === -1 || idx === QUARTERS.length - 1) return { periodTypeCode: 'QUARTERLY', periodValue: 'Q1', periodYear: year + 1 };
+      return { periodTypeCode: 'QUARTERLY', periodValue: QUARTERS[idx + 1], periodYear: year };
+    }
+    if (periodType === 'MONTHLY') {
+      const idx = MONTHS.indexOf(value);
+      if (idx === -1 || idx === MONTHS.length - 1) return { periodTypeCode: 'MONTHLY', periodValue: 'JANUARY', periodYear: year + 1 };
+      return { periodTypeCode: 'MONTHLY', periodValue: MONTHS[idx + 1], periodYear: year };
+    }
+    if (periodType === 'HALF_YEARLY') {
+      if (value === 'H1') return { periodTypeCode: 'HALF_YEARLY', periodValue: 'H2', periodYear: year };
+      return { periodTypeCode: 'HALF_YEARLY', periodValue: 'H1', periodYear: year + 1 };
+    }
+    if (periodType === 'ANNUAL') {
+      return { periodTypeCode: 'ANNUAL', periodValue: '', periodYear: year + 1 };
+    }
+    // CUSTOM or unknown — safe default
+    return { periodTypeCode: 'QUARTERLY', periodValue: 'Q1', periodYear: fallbackYear };
+  }
 
   /** Application Type changed — clear Bundle, Application AND Requirement Version. */
   onFormTypeChange(): void {
@@ -196,7 +342,7 @@ export class AssessmentCyclesComponent implements OnInit {
     this.versionsError = false;
     this.formApplications = [];
     this.duplicateCycle = null;
-    this.suggestedCycleName = null;
+    this.regenerateCycleName();
     this.appService.getApplications(this.form.typeCode || undefined, this.form.bundleCode || undefined)
       .subscribe((apps) => (this.formApplications = apps));
   }
@@ -209,33 +355,34 @@ export class AssessmentCyclesComponent implements OnInit {
     this.versionsError = false;
     this.formApplications = [];
     this.duplicateCycle = null;
-    this.suggestedCycleName = null;
+    this.regenerateCycleName();
     this.appService.getApplications(this.form.typeCode || undefined, this.form.bundleCode || undefined)
       .subscribe((apps) => (this.formApplications = apps));
   }
 
-  /** Application changed — clear the Requirement Version, fetch fresh eligible versions, and revalidate duplicate-name state. */
+  /** Application changed — clear Requirement Version, fetch fresh eligible versions, regenerate name, revalidate duplicate. */
   onFormApplicationChange(): void {
     this.form.requirementVersionPublicId = '';
     this.formVersions = [];
     this.versionsError = false;
+    this.selectedVersionHasNoActiveRequirements = false;
     this.duplicateCycle = null;
-    this.suggestedCycleName = null;
+    this.regenerateCycleName();
     if (!this.form.applicationPublicId) return;
     this.loadEligibleVersions(this.form.applicationPublicId);
     this.checkDuplicateName();
   }
 
-  /** Cycle Name changed — clear any outdated duplicate warning and re-check against the (possibly new) name. */
-  onCycleNameChange(): void {
-    this.duplicateCycle = null;
-    this.suggestedCycleName = null;
-    this.checkDuplicateName();
-    this.checkNameDateMismatch();
-  }
-
-  onDatesChange(): void {
-    this.checkNameDateMismatch();
+  /**
+   * Requirement Version changed — check whether the selected version has at
+   * least one ACTIVE skill requirement (activeRequirementCount > 0). If not,
+   * show a warning and disable "Save as PLANNED" (via isFormValid()). This is
+   * a UX early-warning only; AssessmentCycleService.openCycle() remains the
+   * final authoritative backend safeguard and is unchanged.
+   */
+  onRequirementVersionChange(): void {
+    const selected = this.formVersions.find((v) => v.publicId === this.form.requirementVersionPublicId);
+    this.selectedVersionHasNoActiveRequirements = !!selected && selected.activeRequirementCount === 0;
   }
 
   /**
@@ -258,75 +405,10 @@ export class AssessmentCyclesComponent implements OnInit {
           c.cycleName.trim().toLowerCase() === normalized &&
           c.publicId !== this.editingPublicId
         );
-        if (match) {
-          this.duplicateCycle = match;
-          this.suggestedCycleName = this.buildSuggestedName(
-            match.applicationName,
-            this.form.cycleStartDate || null,
-            this.form.cycleEndDate || null
-          );
-        } else {
-          this.duplicateCycle = null;
-          this.suggestedCycleName = null;
-        }
+        this.duplicateCycle = match ?? null;
       },
-      // Advisory check — a failed lookup must never block the Admin from proceeding.
-      error: () => { this.duplicateCycle = null; this.suggestedCycleName = null; },
+      error: () => { this.duplicateCycle = null; },
     });
-  }
-
-  /** Applies the suggested alternate cycle name to the form and clears the warning. */
-  useSuggestedName(): void {
-    if (!this.suggestedCycleName) return;
-    this.form.cycleName = this.suggestedCycleName;
-    this.duplicateCycle = null;
-    this.suggestedCycleName = null;
-    this.checkNameDateMismatch();
-  }
-
-  /**
-   * Simple, safe name-suggestion rule (no quarter-calculation logic introduced):
-   * "{ApplicationName} {StartMonthAbbrev}-{EndMonthAbbrev} {Year} Assessment".
-   * Falls back to a generic "(New Period)" suffix when no dates are available yet
-   * (e.g. right after clicking "Create Next Cycle" before dates are chosen).
-   */
-  private buildSuggestedName(applicationName: string, startDate: string | null, endDate: string | null): string {
-    if (!startDate || !endDate) {
-      return `${applicationName} Assessment (New Period)`;
-    }
-    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-    const start = new Date(startDate);
-    const end = new Date(endDate);
-    const startAbbrev = months[start.getUTCMonth()];
-    const endAbbrev = months[end.getUTCMonth()];
-    const year = end.getUTCFullYear();
-    return `${applicationName} ${startAbbrev}-${endAbbrev} ${year} Assessment`;
-  }
-
-  /**
-   * Optional lightweight warning (never a hard error): if the free-text cycle name
-   * contains a quarter marker like "Q3 2026" but the selected dates fall entirely
-   * outside that calendar quarter, flag it for the Admin to double-check.
-   */
-  private checkNameDateMismatch(): void {
-    this.nameDateMismatchWarning = null;
-    const match = this.form.cycleName?.match(/Q([1-4])\s?(\d{4})/i);
-    if (!match || !this.form.cycleStartDate || !this.form.cycleEndDate) return;
-
-    const quarter = parseInt(match[1], 10);
-    const year = parseInt(match[2], 10);
-    const quarterStartMonth = (quarter - 1) * 3; // 0-indexed
-    const quarterStart = new Date(Date.UTC(year, quarterStartMonth, 1));
-    const quarterEnd = new Date(Date.UTC(year, quarterStartMonth + 3, 0));
-
-    const selStart = new Date(this.form.cycleStartDate);
-    const selEnd = new Date(this.form.cycleEndDate);
-
-    const overlaps = selStart <= quarterEnd && selEnd >= quarterStart;
-    if (!overlaps) {
-      this.nameDateMismatchWarning =
-        `The cycle name indicates Q${quarter} ${year}, but the selected assessment dates are outside that period. Please verify the cycle name.`;
-    }
   }
 
   /** Fetches only eligible (active, non-REJECTED) Requirement Versions for the given application. */
@@ -337,6 +419,10 @@ export class AssessmentCyclesComponent implements OnInit {
       next: (versions) => {
         this.formVersions = versions;
         this.versionsLoading = false;
+        // Re-evaluate the active-requirements warning now that versions are loaded —
+        // covers Edit/Create-Next-Cycle flows where requirementVersionPublicId is
+        // already pre-populated before this async response arrives.
+        this.onRequirementVersionChange();
       },
       error: () => {
         this.formVersions = [];
@@ -347,13 +433,22 @@ export class AssessmentCyclesComponent implements OnInit {
   }
 
   isFormValid(): boolean {
+    const periodOk = this.isAnnual
+      ? true
+      : this.isCustomPeriod
+        ? !!this.form.customLabel.trim()
+        : !!this.form.periodValue;
     return !!this.form.cycleName.trim()
         && !!this.form.applicationPublicId
+        && !!this.form.periodTypeCode
+        && periodOk
+        && !!this.form.periodYear
         && !!this.form.requirementVersionPublicId
         && !!this.form.cycleStartDate
         && !!this.form.cycleEndDate
         && this.form.cycleEndDate >= this.form.cycleStartDate
-        && this.formVersions.length > 0;
+        && this.formVersions.length > 0
+        && !this.selectedVersionHasNoActiveRequirements;
   }
 
   submitForm(): void {
@@ -361,11 +456,16 @@ export class AssessmentCyclesComponent implements OnInit {
     this.formSubmitting = true;
     this.formError = null;
 
+    const periodValueToSend = this.isCustomPeriod ? this.form.customLabel.trim() : (this.isAnnual ? null : this.form.periodValue);
+
     if (this.formMode === 'create') {
       const req: CreateAssessmentCycleRequest = {
         applicationPublicId: this.form.applicationPublicId,
         requirementVersionPublicId: this.form.requirementVersionPublicId,
         cycleName: this.form.cycleName.trim(),
+        periodTypeCode: this.form.periodTypeCode,
+        periodValue: periodValueToSend,
+        periodYear: this.form.periodYear,
         cycleStartDate: this.form.cycleStartDate,
         cycleEndDate: this.form.cycleEndDate,
       };
@@ -384,6 +484,9 @@ export class AssessmentCyclesComponent implements OnInit {
     } else {
       const req: UpdateAssessmentCycleRequest = {
         cycleName: this.form.cycleName.trim(),
+        periodTypeCode: this.form.periodTypeCode,
+        periodValue: periodValueToSend,
+        periodYear: this.form.periodYear,
         cycleStartDate: this.form.cycleStartDate,
         cycleEndDate: this.form.cycleEndDate,
         applicationPublicId: this.form.applicationPublicId,
@@ -403,6 +506,8 @@ export class AssessmentCyclesComponent implements OnInit {
       });
     }
   }
+
+  cancelForm(): void { this.showForm = false; this.formError = null; }
 
   // ---- Open / Close ----
 
@@ -434,13 +539,10 @@ export class AssessmentCyclesComponent implements OnInit {
 
   // ---- Reopen (CLOSED -> OPEN, M4 stabilization) ----
 
-  /** Only CLOSED cycles may be reopened — never shown for PLANNED/OPEN/CANCELLED. */
   canReopen(cycle: AssessmentCycle): boolean {
     return cycle.statusCode === 'CLOSED';
   }
 
-  /** True when a CLOSED cycle's end date has already passed — the Reopen modal
-   *  must then require a valid future End Date before allowing the transition. */
   isClosedCycleExpired(cycle: AssessmentCycle): boolean {
     if (cycle.statusCode !== 'CLOSED' || !cycle.cycleEndDate) return false;
     const today = new Date().toISOString().slice(0, 10);
@@ -486,8 +588,6 @@ export class AssessmentCyclesComponent implements OnInit {
         this.load();
       },
       error: (err) => {
-        // Keep the modal open on failure (e.g. expired-without-new-end-date 409)
-        // so the Admin can supply a valid End Date and retry without re-entering the reason.
         this.reopenError = err?.error?.message ?? 'Failed to reopen cycle.';
         this.reopenSubmitting = false;
       },
@@ -499,38 +599,9 @@ export class AssessmentCyclesComponent implements OnInit {
   viewDetails(cycle: AssessmentCycle): void { this.viewingCycle = cycle; }
   closeDetails(): void { this.viewingCycle = null; }
 
-  /**
-   * True when an OPEN cycle's end date has passed. Purely a UI/Admin-clarity
-   * indicator — does NOT alter the persisted cycle status (backend remains OPEN
-   * until an Admin explicitly closes it).
-   */
   isExpired(cycle: AssessmentCycle | null): boolean {
     if (!cycle || cycle.statusCode !== 'OPEN' || !cycle.cycleEndDate) return false;
     const today = new Date().toISOString().slice(0, 10);
     return cycle.cycleEndDate < today;
-  }
-
-  @HostListener('document:keydown.escape')
-  onEscapeKey(): void {
-    if (this.viewingCycle) this.closeDetails();
-    else if (this.confirmOpenCycle) this.cancelOpen();
-    else if (this.confirmCloseCycle) this.cancelClose();
-    else if (this.reopenCycleTarget) this.cancelReopen();
-    else if (this.showForm) this.cancelForm();
-  }
-
-  dismissSuccess(): void { this.successMessage = null; }
-  dismissError(): void { this.error = null; }
-
-  private emptyForm() {
-    return {
-      typeCode: '',
-      bundleCode: '',
-      applicationPublicId: '',
-      requirementVersionPublicId: '',
-      cycleName: '',
-      cycleStartDate: '',
-      cycleEndDate: '',
-    };
   }
 }

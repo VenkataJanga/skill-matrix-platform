@@ -75,7 +75,7 @@ class AssessmentCycleControllerTest {
 
         sampleCycle = new AssessmentCycleDto(
                 "pub-cycle-1", "pub-app-atlas", "ATLAS_DEZENTRAL", "ATLAS-deZentral",
-                "pub-rv-1", "v1.0", "ATLAS FY26",
+                "pub-rv-1", "v1.0", "ATLAS FY26", null, null, null,
                 LocalDate.of(2026, 1, 1), LocalDate.of(2026, 3, 31),
                 "PLANNED", "Planned", true,
                 LocalDateTime.now(), LocalDateTime.now(), "admin", "admin");
@@ -121,7 +121,7 @@ class AssessmentCycleControllerTest {
         when(assessmentCycleService.createCycle(any(), eq("admin"))).thenReturn(sampleCycle);
 
         CreateAssessmentCycleRequest req = new CreateAssessmentCycleRequest(
-                "pub-app-atlas", "pub-rv-1", "ATLAS FY26", LocalDate.of(2026, 1, 1), LocalDate.of(2026, 3, 31));
+                "pub-app-atlas", "pub-rv-1", "ATLAS FY26", null, null, null, LocalDate.of(2026, 1, 1), LocalDate.of(2026, 3, 31));
 
         mockMvc.perform(post("/api/v1/admin/assessment-cycles")
                         .with(user(adminPrincipal)).with(csrf())
@@ -171,7 +171,7 @@ class AssessmentCycleControllerTest {
     void reopenCycle_adminCan() throws Exception {
         AssessmentCycleDto reopened = new AssessmentCycleDto(
                 "pub-cycle-1", "pub-app-atlas", "ATLAS_DEZENTRAL", "ATLAS-deZentral",
-                "pub-rv-1", "v1.0", "ATLAS Q2 2026 Assessment",
+                "pub-rv-1", "v1.0", "ATLAS Q2 2026 Assessment", null, null, null,
                 LocalDate.of(2026, 10, 26), LocalDate.of(2026, 11, 26),
                 "OPEN", "Open", true,
                 LocalDateTime.now(), LocalDateTime.now(), "admin", "admin");

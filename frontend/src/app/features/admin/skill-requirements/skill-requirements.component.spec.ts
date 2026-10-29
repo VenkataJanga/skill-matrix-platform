@@ -26,6 +26,7 @@ describe('SkillRequirementsComponent', () => {
     statusCode: 'DRAFT', statusLabel: 'Draft', publishedAt: null,
     approvedAt: null, approvedBy: null, active: true,
     createdAt: '', updatedAt: '', createdBy: null, updatedBy: null,
+    activeRequirementCount: 1,
   };
 
   const mockRequirement: SkillRequirement = {

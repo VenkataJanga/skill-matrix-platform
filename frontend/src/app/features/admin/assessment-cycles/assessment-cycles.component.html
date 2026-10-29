@@ -84,32 +84,8 @@
 
   <!-- Create/Edit Form Modal -->
   <div class="modal-overlay" *ngIf="showForm" (click)="cancelForm()">
-    <div class="modal-box" (click)="$event.stopPropagation()">
+    <div class="modal-box modal-box-lg" (click)="$event.stopPropagation()">
       <h3 class="modal-title">{{ formMode === 'create' ? 'New Assessment Cycle' : 'Edit Assessment Cycle' }}</h3>
-
-      <div class="form-group">
-        <label>Cycle Name *</label>
-        <input type="text" class="form-control" [(ngModel)]="form.cycleName"
-               (blur)="onCycleNameChange()" placeholder="e.g. ATLAS FY26 Assessment" />
-
-        <div class="duplicate-warning" *ngIf="duplicateCycle">
-          <p class="field-hint field-hint-error">
-            An assessment cycle with this name already exists for {{ duplicateCycle.applicationName }}.
-          </p>
-          <div class="duplicate-details">
-            <div><strong>Existing Cycle:</strong> {{ duplicateCycle.cycleName }}</div>
-            <div><strong>Period:</strong> {{ duplicateCycle.cycleStartDate | date: 'dd-MMM-yyyy' }} – {{ duplicateCycle.cycleEndDate | date: 'dd-MMM-yyyy' }}</div>
-            <div><strong>Status:</strong> {{ duplicateCycle.statusLabel ?? duplicateCycle.statusCode }}
-              <span class="badge badge-expired" *ngIf="isExpired(duplicateCycle)">Expired</span>
-            </div>
-          </div>
-          <button type="button" class="btn btn-sm btn-outline" *ngIf="suggestedCycleName" (click)="useSuggestedName()">
-            Use suggested name: "{{ suggestedCycleName }}"
-          </button>
-        </div>
-
-        <p class="field-hint field-hint-warning" *ngIf="nameDateMismatchWarning">{{ nameDateMismatchWarning }}</p>
-      </div>
 
       <div class="form-row">
         <div class="form-group">
@@ -136,12 +112,58 @@
         </select>
       </div>
 
+      <div class="form-row">
+        <div class="form-group">
+          <label>Period Type *</label>
+          <select class="form-control" [(ngModel)]="form.periodTypeCode" (change)="onPeriodTypeChange()">
+            <option *ngFor="let pt of periodTypes" [value]="pt">{{ pt }}</option>
+          </select>
+        </div>
+        <div class="form-group" *ngIf="!isAnnual && !isCustomPeriod">
+          <label>Period *</label>
+          <select class="form-control" [(ngModel)]="form.periodValue" (change)="onPeriodValueChange()">
+            <option value="">Select Period</option>
+            <option *ngFor="let p of periodOptions" [value]="p.code">{{ p.label }}</option>
+          </select>
+        </div>
+        <div class="form-group" *ngIf="isCustomPeriod">
+          <label>Custom Period / Cycle Label *</label>
+          <input type="text" class="form-control" [(ngModel)]="form.customLabel"
+                 (input)="onCustomLabelChange()" placeholder="e.g. Mid-Year Technical Assessment" />
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label>Year *</label>
+        <select class="form-control" [(ngModel)]="form.periodYear" (change)="onYearChange()">
+          <option *ngFor="let y of yearOptions" [value]="y">{{ y }}</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label>Cycle Name</label>
+        <input type="text" class="form-control cycle-name-readonly" [value]="form.cycleName" readonly disabled
+               placeholder="Select Application, Period and Year to generate the Cycle Name" />
+        <p class="field-hint">Automatically generated from Application, Period and Year.</p>
+
+        <div class="duplicate-warning" *ngIf="duplicateCycle">
+          <p class="field-hint field-hint-error">
+            An assessment cycle for {{ duplicateCycle.applicationName }} named "{{ duplicateCycle.cycleName }}" already exists.
+          </p>
+          <div class="duplicate-details">
+            <div><strong>Period:</strong> {{ duplicateCycle.cycleStartDate | date: 'dd-MMM-yyyy' }} – {{ duplicateCycle.cycleEndDate | date: 'dd-MMM-yyyy' }}</div>
+            <div><strong>Status:</strong> {{ duplicateCycle.statusLabel ?? duplicateCycle.statusCode }}</div>
+          </div>
+        </div>
+      </div>
+
       <div class="form-group">
         <label>Requirement Version *</label>
         <select class="form-control" [(ngModel)]="form.requirementVersionPublicId"
+                (change)="onRequirementVersionChange()"
                 [disabled]="versionsLoading || versionsError || formVersions.length === 0">
           <option value="" *ngIf="!versionsLoading && !versionsError">
-            {{ formVersions.length === 0 ? 'No eligible versions available' : 'Select Version' }}
+            {{ formVersions.length === 0 ? 'No eligible requirement versions available.' : 'Select Version' }}
           </option>
           <option value="" *ngIf="versionsLoading">Loading versions...</option>
           <option value="" *ngIf="versionsError">Unable to load Requirement Versions</option>
@@ -153,19 +175,27 @@
         </p>
         <p class="field-hint field-hint-warning"
            *ngIf="!versionsLoading && !versionsError && form.applicationPublicId && formVersions.length === 0">
-          No eligible Requirement Version is available for this application.
-          Complete Application Skill Requirement Mapping first (Admin → Skill Requirement Mapping).
+          No eligible requirement versions available. Complete Application Skill Requirement Mapping first
+          (Admin → Skill Requirement Mapping).
         </p>
+
+        <div class="duplicate-warning" *ngIf="form.requirementVersionPublicId && selectedVersionHasNoActiveRequirements">
+          <p class="field-hint field-hint-error">
+            This requirement version has no active skill requirements. Add or activate skill requirements before
+            creating/opening an assessment cycle.
+          </p>
+          <a routerLink="/admin/skill-requirements" class="btn-link">Go to Skill Requirement Mapping</a>
+        </div>
       </div>
 
       <div class="form-row">
         <div class="form-group">
           <label>Start Date *</label>
-          <input type="date" class="form-control" [(ngModel)]="form.cycleStartDate" (change)="onDatesChange()" />
+          <input type="date" class="form-control" [(ngModel)]="form.cycleStartDate" />
         </div>
         <div class="form-group">
           <label>End Date *</label>
-          <input type="date" class="form-control" [(ngModel)]="form.cycleEndDate" (change)="onDatesChange()" />
+          <input type="date" class="form-control" [(ngModel)]="form.cycleEndDate" />
         </div>
       </div>
 

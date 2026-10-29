@@ -5,6 +5,7 @@ import com.skillmatrix.domain.entity.Application;
 import com.skillmatrix.domain.entity.LookupValue;
 import com.skillmatrix.domain.entity.RequirementVersion;
 import com.skillmatrix.domain.repository.ApplicationRepository;
+import com.skillmatrix.domain.repository.ExpectedRatingRepository;
 import com.skillmatrix.domain.repository.LookupValueRepository;
 import com.skillmatrix.domain.repository.RequirementVersionRepository;
 import org.junit.jupiter.api.BeforeEach;
@@ -27,6 +28,7 @@ class RequirementVersionServiceTest {
     @Mock RequirementVersionRepository requirementVersionRepository;
     @Mock ApplicationRepository applicationRepository;
     @Mock LookupValueRepository lookupValueRepository;
+    @Mock ExpectedRatingRepository expectedRatingRepository;
     @Mock AuditService auditService;
 
     @InjectMocks RequirementVersionService service;
@@ -103,5 +105,59 @@ class RequirementVersionServiceTest {
 
         assertThat(avusResult).isEmpty();
         assertThat(avusResult).noneMatch(dto -> dto.publicId().equals(atlasV1.getPublicId()));
+    }
+
+    // ---------------------------------------------------------------
+    // activeRequirementCount (frontend early-warning safeguard)
+    // ---------------------------------------------------------------
+
+    @Test
+    @DisplayName("getEligibleVersionsForApplication reports activeRequirementCount=0 when version has zero active skill requirements")
+    void getEligibleVersionsForApplication_zeroActiveRequirements() {
+        LookupValue approved = LookupValue.builder().id(1L).valueCode("APPROVED").valueLabel("Approved").active(true).build();
+        RequirementVersion vtsV1 = RequirementVersion.builder().id(3L).publicId("pub-rv-vts-1")
+                .application(atlasApp).versionCode("v1.0").versionName("VTS v1.0").statusLookup(approved).active(true).build();
+
+        when(requirementVersionRepository.findEligibleByApplicationPublicId("pub-app-atlas"))
+                .thenReturn(List.of(vtsV1));
+        when(expectedRatingRepository.countByRequirementVersion_IdAndActiveTrue(3L)).thenReturn(0L);
+
+        var result = service.getEligibleVersionsForApplication("pub-app-atlas");
+
+        assertThat(result).hasSize(1);
+        assertThat(result.get(0).activeRequirementCount()).isZero();
+    }
+
+    @Test
+    @DisplayName("getEligibleVersionsForApplication reports activeRequirementCount=0 when version has only inactive (deactivated) skill requirements")
+    void getEligibleVersionsForApplication_onlyInactiveRequirementsCountAsZero() {
+        LookupValue approved = LookupValue.builder().id(1L).valueCode("APPROVED").valueLabel("Approved").active(true).build();
+        RequirementVersion vtsV1 = RequirementVersion.builder().id(4L).publicId("pub-rv-vts-1")
+                .application(atlasApp).versionCode("v1.0").versionName("VTS v1.0").statusLookup(approved).active(true).build();
+
+        when(requirementVersionRepository.findEligibleByApplicationPublicId("pub-app-atlas"))
+                .thenReturn(List.of(vtsV1));
+        // Repository method only counts active=true rows — deactivated requirements are excluded at the query level.
+        when(expectedRatingRepository.countByRequirementVersion_IdAndActiveTrue(4L)).thenReturn(0L);
+
+        var result = service.getEligibleVersionsForApplication("pub-app-atlas");
+
+        assertThat(result.get(0).activeRequirementCount()).isZero();
+    }
+
+    @Test
+    @DisplayName("getEligibleVersionsForApplication reports a positive activeRequirementCount when version has active skill requirements")
+    void getEligibleVersionsForApplication_positiveActiveRequirements() {
+        LookupValue approved = LookupValue.builder().id(1L).valueCode("APPROVED").valueLabel("Approved").active(true).build();
+        RequirementVersion vtsV1 = RequirementVersion.builder().id(5L).publicId("pub-rv-vts-1")
+                .application(atlasApp).versionCode("v1.0").versionName("VTS v1.0").statusLookup(approved).active(true).build();
+
+        when(requirementVersionRepository.findEligibleByApplicationPublicId("pub-app-atlas"))
+                .thenReturn(List.of(vtsV1));
+        when(expectedRatingRepository.countByRequirementVersion_IdAndActiveTrue(5L)).thenReturn(3L);
+
+        var result = service.getEligibleVersionsForApplication("pub-app-atlas");
+
+        assertThat(result.get(0).activeRequirementCount()).isEqualTo(3L);
     }
 }

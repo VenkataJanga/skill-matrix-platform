@@ -20,6 +20,14 @@ export interface RequirementVersion {
   updatedAt: string;
   createdBy: string | null;
   updatedBy: string | null;
+  /**
+   * Count of ACTIVE skill requirements mapped to this version. Used by the
+   * Assessment Cycle "Requirement Version" dropdown to warn Admin BEFORE cycle
+   * creation when a version has zero active requirements. The backend Open-time
+   * safeguard in AssessmentCycleService.openCycle() remains the final authoritative
+   * check and is unaffected by this field.
+   */
+  activeRequirementCount: number;
 }
 
 export interface CreateRequirementVersionRequest {

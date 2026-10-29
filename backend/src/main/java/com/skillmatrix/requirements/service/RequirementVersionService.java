@@ -5,6 +5,7 @@ import com.skillmatrix.common.exception.BusinessException;
 import com.skillmatrix.domain.entity.Application;
 import com.skillmatrix.domain.entity.RequirementVersion;
 import com.skillmatrix.domain.repository.ApplicationRepository;
+import com.skillmatrix.domain.repository.ExpectedRatingRepository;
 import com.skillmatrix.domain.repository.LookupValueRepository;
 import com.skillmatrix.domain.repository.RequirementVersionRepository;
 import com.skillmatrix.requirements.dto.CreateRequirementVersionRequest;
@@ -36,11 +37,12 @@ public class RequirementVersionService {
     private final RequirementVersionRepository requirementVersionRepository;
     private final ApplicationRepository applicationRepository;
     private final LookupValueRepository lookupValueRepository;
+    private final ExpectedRatingRepository expectedRatingRepository;
     private final AuditService auditService;
 
     public List<RequirementVersionDto> getVersionsForApplication(String applicationPublicId) {
         return requirementVersionRepository.findAllByApplicationPublicId(applicationPublicId)
-                .stream().map(RequirementVersionDto::from).toList();
+                .stream().map(this::toDtoWithActiveCount).toList();
     }
 
     /**
@@ -50,10 +52,21 @@ public class RequirementVersionService {
      * a version that would be rejected by {@code AssessmentCycleService}. Returns
      * an empty list (never an error) when the application has no eligible version —
      * the caller is responsible for distinguishing "no data" from an API failure.
+     *
+     * Each returned DTO also carries {@code activeRequirementCount} so the Admin UI
+     * can proactively warn (and disable "Save as PLANNED") when a version has zero
+     * active skill requirements — BEFORE the Admin attempts to Open the cycle. The
+     * backend Open-time safeguard in {@code AssessmentCycleService.openCycle()} is
+     * unaffected and remains the final authoritative check.
      */
     public List<RequirementVersionDto> getEligibleVersionsForApplication(String applicationPublicId) {
         return requirementVersionRepository.findEligibleByApplicationPublicId(applicationPublicId)
-                .stream().map(RequirementVersionDto::from).toList();
+                .stream().map(this::toDtoWithActiveCount).toList();
+    }
+
+    private RequirementVersionDto toDtoWithActiveCount(RequirementVersion rv) {
+        long activeCount = expectedRatingRepository.countByRequirementVersion_IdAndActiveTrue(rv.getId());
+        return RequirementVersionDto.from(rv, activeCount);
     }
 
     public RequirementVersionDto getByPublicId(String publicId) {
